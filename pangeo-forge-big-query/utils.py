@@ -1,3 +1,6 @@
+# Note: All of this code was written by Julius Busecke and copied from this feedstock:
+# https://github.com/leap-stc/cmip6-leap-feedstock/blob/main/feedstock/recipe.py#L262
+
 from google.cloud import bigquery
 from typing import Optional, List
 from google.api_core.exceptions import NotFound
@@ -44,7 +47,6 @@ class IIDResult:
             self.latest_row = self.rows[0]
         else:
             self.exists = False
-
 
 @dataclass
 class BQInterface:
