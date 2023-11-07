@@ -48,6 +48,7 @@ class IIDResult:
         else:
             self.exists = False
 
+
 @dataclass
 class BQInterface:
     """Class to read/write information from BigQuery table
