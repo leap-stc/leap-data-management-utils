@@ -26,7 +26,6 @@ dependencies = [
     "apache-beam",
     "google-cloud-bigquery",
     "google-api-core",
-    "tornado",
     "zarr",
 ]
 
