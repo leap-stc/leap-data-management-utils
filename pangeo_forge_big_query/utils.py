@@ -187,19 +187,14 @@ class LogToBigQuery(beam.PTransform):
 
 @dataclass
 class RegisterDatasetToCatalog(beam.PTransform):
-    """PTransform to register a dataset in LEAP catalog"""
-
     table_id: str
     dataset_id: str
-    dataset_url: str
 
     def _register_dataset_to_catalog(
         self, store: zarr.storage.FSStore
     ) -> zarr.storage.FSStore:
         bq_interface = BQInterface(table_id=self.table_id)
-        bq_interface.catalog_insert(
-            self, dataset_id=self.dataset_id, dataset_url=store.path
-        )
+        bq_interface.catalog_insert(dataset_id=self.dataset_id, dataset_url=store.path)
         return store
 
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
