@@ -60,16 +60,18 @@ class BQInterface:
     table_id: str
     client: Optional[bigquery.client.Client] = None
     result_limit: Optional[int] = 10
+    schema: Optional[list] = None
 
     def __post_init__(self):
         # TODO how do I handle the schema? This class could be used for any table, but for
         # TODO this specific case I want to prescribe the schema
         # for now just hardcode it
-        self.schema = [
-            bigquery.SchemaField("instance_id", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("store", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
-        ]
+        if not self.schema:
+            self.schema = [
+                bigquery.SchemaField("instance_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("store", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
+            ]
         if self.client is None:
             self.client = bigquery.Client()
 
@@ -85,6 +87,22 @@ class BQInterface:
         table = bigquery.Table(self.table_id, schema=self.schema)
         table = self.client.create_table(table)  # Make an API request.
         return table
+
+    def catalog_insert(self, dataset_id: str, dataset_url: str):
+        timestamp = datetime.datetime.now().isoformat()
+        table = self.client.get_table(self.table_id)
+
+        rows_to_insert = [
+            {
+                "dataset_id": dataset_id,
+                "dataset_url": dataset_url,
+                "timestamp": timestamp,
+            }
+        ]
+
+        errors = self.client.insert_rows_json(table, rows_to_insert)
+        if errors:
+            raise RuntimeError(f"Error inserting row: {errors}")
 
     def insert(self, IID_entry):
         """Insert a row into the table for a given IID_entry object"""
@@ -165,3 +183,24 @@ class LogToBigQuery(beam.PTransform):
 
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
         return pcoll | beam.Map(self._log_to_bigquery)
+
+
+@dataclass
+class RegisterDatasetToCatalog(beam.PTransform):
+    """PTransform to register a dataset in LEAP catalog"""
+
+    table_id: str
+    dataset_id: str
+    dataset_url: str
+
+    def _register_dataset_to_catalog(
+        self, store: zarr.storage.FSStore
+    ) -> zarr.storage.FSStore:
+        bq_interface = BQInterface(table_id=self.table_id)
+        bq_interface.catalog_insert(
+            self, dataset_id=self.dataset_id, dataset_url=store.path
+        )
+        return store
+
+    def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
+        return pcoll | beam.Map(self._register_dataset_to_catalog)
