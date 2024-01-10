@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 
 [project]
-name = "pangeo-forge-big-query"
+name = "data-management-utils"
 dynamic = ["version"]
 requires-python = ">=3.9"
-description = "pangeo-forge-recipes extension library for logging data in Google Big Query"
+description = "LEAP / pangeo-forge-recipes extension library for logging data in Google Big Query"
 readme = "README.md"
 authors = [{ name = "CarbonPlan", email = "tech@carbonplan.org" }]
 classifiers = [

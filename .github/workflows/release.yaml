@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.repository == 'carbonplan/pangeo-forge-bigquery'
+    if: github.repository == 'leap-stc/data-management-utils'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
