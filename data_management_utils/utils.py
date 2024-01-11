@@ -6,9 +6,66 @@ from typing import Optional, List
 from google.api_core.exceptions import NotFound
 import apache_beam as beam
 import zarr
+import xarray as xr 
 import datetime
 from dataclasses import dataclass
+import dask 
+#----------------------------------------------------------------
+# ----------------- Functions -----------------------------------
+#----------------------------------------------------------------
+# wrapper functions (not sure if this works instead of the repeated copy and paste in the transform below)
+def log_to_bq(iid: str, store: zarr.storage.FSStore, table_id: str):
+    bq_interface = BQInterface(table_id=table_id)
+    iid_entry = IIDEntry(iid=iid, store=store.path)
+    bq_interface.insert(iid_entry)
 
+
+
+
+    
+#----------------------------------------------------------------
+# ----------------- Transforms ----------------------------------
+#----------------------------------------------------------------
+
+
+@dataclass
+class ValidateCFConventions(beam.PTransform):
+    """
+    Transform to validate CF conventions 
+    """
+    @staticmethod
+    def _get_dataset(store: zarr.storage.FSStore) -> xr.Dataset:
+        import xarray as xr
+        return xr.open_dataset(store, engine='zarr', chunks={}, use_cftime=True)
+    
+    @staticmethod
+    def _retrieve_CF_axes(ds: xr.Dataset) -> dict[str, dict[str, str]]:
+        """Retrieve the CF dimensions from the dataset"""
+        import cf_xarray  # noqa
+
+        results = {}
+        for variable in ds.variables:
+            axes = ds[variable].cf.axes
+            for key, value in axes.items():
+                axes[key] = value[0]
+            results[variable] = axes
+        return results
+        
+    def _test_attributes(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
+        ds = self._get_dataset(store)
+        cf_attrs = self._retrieve_CF_axes(ds)
+
+        # How should we validate cf_attrs from here?
+        
+        import pdb; pdb.set_trace()
+          
+        return store
+    
+    def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
+        return (pcoll
+            | "Testing - Check CF Attrs" >> beam.Map(self._test_attributes)
+        )
+    
 @dataclass
 class IIDEntry:
     """Single row/entry for an iid
@@ -160,11 +217,6 @@ class BQInterface:
         return list(set([r["instance_id"] for r in results]))
 
 
-# wrapper functions (not sure if this works instead of the repeated copy and paste in the transform below)
-def log_to_bq(iid: str, store: zarr.storage.FSStore, table_id: str):
-    bq_interface = BQInterface(table_id=table_id)
-    iid_entry = IIDEntry(iid=iid, store=store.path)
-    bq_interface.insert(iid_entry)
 
 
 @dataclass
