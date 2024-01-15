@@ -51,7 +51,9 @@ class ValidateCFConventions(beam.PTransform):
             results[variable] = axes
         return results
 
-    def _test_attributes(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
+    def _validate_cf_attributes(
+        self, store: zarr.storage.FSStore
+    ) -> zarr.storage.FSStore:
         """cf_axes validation"""
         import cf_xarray  # noqa
 
@@ -84,7 +86,7 @@ class ValidateCFConventions(beam.PTransform):
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
         return (
             pcoll
-            | "Testing - Check CF Attrs" >> beam.Map(self._test_attributes)
+            | "Testing - Check CF Attrs" >> beam.Map(self._validate_cf_attributes)
             | "Update CF_Axes" >> beam.Map(self._update_cf_axes)
         )
 
