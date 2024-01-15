@@ -21,6 +21,19 @@ def log_to_bq(iid: str, store: zarr.storage.FSStore, table_id: str):
     bq_interface.insert(iid_entry)
 
 
+def _retrieve_CF_axes(ds: xr.Dataset) -> dict[str, dict[str, str]]:
+    """Retrieve the CF dimensions from the dataset"""
+    import cf_xarray  # noqa
+
+    results = {}
+    for variable in ds.variables:
+        axes = ds[variable].cf.axes
+        for key, value in axes.items():
+            axes[key] = value[0]
+        results[variable] = axes
+    return results
+
+
 # ----------------------------------------------------------------
 # ----------------- Transforms ----------------------------------
 # ----------------------------------------------------------------
@@ -37,19 +50,6 @@ class ValidateCFConventions(beam.PTransform):
         import xarray as xr
 
         return xr.open_dataset(store, engine="zarr", chunks={}, use_cftime=True)
-
-    @staticmethod
-    def _retrieve_CF_axes(ds: xr.Dataset) -> dict[str, dict[str, str]]:
-        """Retrieve the CF dimensions from the dataset"""
-        import cf_xarray  # noqa
-
-        results = {}
-        for variable in ds.variables:
-            axes = ds[variable].cf.axes
-            for key, value in axes.items():
-                axes[key] = value[0]
-            results[variable] = axes
-        return results
 
     def _validate_cf_attributes(
         self, store: zarr.storage.FSStore
@@ -78,7 +78,7 @@ class ValidateCFConventions(beam.PTransform):
     def _update_cf_axes(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
         """Updates the ds attrs with cf_axes information"""
         ds = self._get_dataset(store)
-        cf_attrs = self._retrieve_CF_axes(ds)
+        cf_attrs = _retrieve_CF_axes(ds)
         ds.attrs["cf_axes"] = cf_attrs
 
         return store
