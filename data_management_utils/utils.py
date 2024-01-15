@@ -6,8 +6,90 @@ from typing import Optional, List
 from google.api_core.exceptions import NotFound
 import apache_beam as beam
 import zarr
+import xarray as xr
 import datetime
 from dataclasses import dataclass
+
+
+# ----------------------------------------------------------------
+# ----------------- Functions -----------------------------------
+# ----------------------------------------------------------------
+# wrapper functions (not sure if this works instead of the repeated copy and paste in the transform below)
+def log_to_bq(iid: str, store: zarr.storage.FSStore, table_id: str):
+    bq_interface = BQInterface(table_id=table_id)
+    iid_entry = IIDEntry(iid=iid, store=store.path)
+    bq_interface.insert(iid_entry)
+
+
+def _retrieve_CF_axes(ds: xr.Dataset) -> dict[str, dict[str, str]]:
+    """Retrieve the CF dimensions from the dataset"""
+    import cf_xarray  # noqa
+
+    results = {}
+    for variable in ds.variables:
+        axes = ds[variable].cf.axes
+        for key, value in axes.items():
+            axes[key] = value[0]
+        results[variable] = axes
+    return results
+
+
+# ----------------------------------------------------------------
+# ----------------- Transforms ----------------------------------
+# ----------------------------------------------------------------
+
+
+@dataclass
+class ValidateCFConventions(beam.PTransform):
+    """
+    Transform to validate CF conventions
+    """
+
+    @staticmethod
+    def _get_dataset(store: zarr.storage.FSStore) -> xr.Dataset:
+        import xarray as xr
+
+        return xr.open_dataset(store, engine="zarr", chunks={}, use_cftime=True)
+
+    def _validate_cf_attributes(
+        self, store: zarr.storage.FSStore
+    ) -> zarr.storage.FSStore:
+        """cf_axes validation"""
+        import cf_xarray  # noqa
+
+        ds = self._get_dataset(store)
+        cf_axes_dict = ds.cf.axes
+        # Check X coord
+        assert cf_axes_dict.get(
+            "X"
+        ), "According to cf_xarray, this dataset is missing an X Axis"
+        # Check Y coord
+        assert cf_axes_dict.get(
+            "Y"
+        ), "According to cf_xarray, this dataset is missing a Y Axis"
+        # Check that data variables contains Axes
+        data_vars = [var for var in ds.data_vars]
+        for var in data_vars:
+            assert ds[var].cf.axes["X"], f"{var} does not have an X axis"
+            assert ds[var].cf.axes["Y"], f"{var} does not have a Y axis"
+
+        return store
+
+    def _update_cf_axes(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
+        """Updates the ds attrs with cf_axes information"""
+        ds = self._get_dataset(store)
+        cf_attrs = _retrieve_CF_axes(ds)
+        ds.attrs["cf_axes"] = cf_attrs
+
+        return store
+
+    def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
+        return (
+            pcoll
+            | "Testing - Check CF Attrs" >> beam.Map(self._validate_cf_attributes)
+            | "Update CF_Axes" >> beam.Map(self._update_cf_axes)
+        )
+
 
 @dataclass
 class IIDEntry:
@@ -158,13 +240,6 @@ class BQInterface:
         results = self._get_query_job(query).result()
         # this is a full row iterator, for now just return the iids
         return list(set([r["instance_id"] for r in results]))
-
-
-# wrapper functions (not sure if this works instead of the repeated copy and paste in the transform below)
-def log_to_bq(iid: str, store: zarr.storage.FSStore, table_id: str):
-    bq_interface = BQInterface(table_id=table_id)
-    iid_entry = IIDEntry(iid=iid, store=store.path)
-    bq_interface.insert(iid_entry)
 
 
 @dataclass

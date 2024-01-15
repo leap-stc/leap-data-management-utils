@@ -24,6 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "apache-beam",
+    "cf_xarray",
     "google-cloud-bigquery",
     "google-api-core",
     "zarr",
