@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 
 [project]
-name = "data-management-utils"
+name = "leap-data-management-utils"
 dynamic = ["version"]
 requires-python = ">=3.9"
 description = "LEAP / pangeo-forge-recipes extension library for logging data in Google Big Query"
