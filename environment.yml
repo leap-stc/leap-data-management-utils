@@ -1,0 +1,13 @@
+name: leap-data-management-utils
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - jupyterlab
+  - pandas
+  - pip
+  - pip:
+    - apache-beam[gcp]
+    - google-cloud-bigquery
+    - zarr
+    - db_dtypes
