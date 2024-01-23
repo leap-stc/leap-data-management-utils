@@ -177,7 +177,7 @@ class LogCMIPToBigQuery(beam.PTransform):
         bq_interface = BQInterface(table_id=self.table_id)
         iid_entry = IIDEntry(
             iid=self.iid,
-            store=store.path,
+            store='gs://'+ store.path, #TODO: Get the full store path from the store object
             retracted=self.retracted,
             tests_passed=self.tests_passed
             )
