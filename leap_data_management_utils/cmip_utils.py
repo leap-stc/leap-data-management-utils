@@ -77,6 +77,10 @@ class CMIPBQInterface(BQInterface):
             ]
         super().__post_init__()
 
+    def _get_timestamp(self) -> str:
+        """Get the current timestamp"""
+        return datetime.datetime.utcnow().isoformat()
+
     def insert_iid(self, IID_entry):
         """Insert a row into the table for a given IID_entry object"""
         fields = {
@@ -84,13 +88,14 @@ class CMIPBQInterface(BQInterface):
             "store": IID_entry.store,
             "retracted": IID_entry.retracted,
             "tests_passed": IID_entry.tests_passed
+            'timestamp': self._get_timestamp(),
             }
         self.insert(fields)
 
     def insert_multiple_iids(self, IID_entries: List[IIDEntry]):
         """Insert multiple rows into the table for a given list of IID_entry objects"""
         #FIXME This repeats a bunch of code from the parent class .insert() method
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = self._get_timestamp()
         rows_to_insert = [
             {
                 "instance_id": IID_entry.iid,
