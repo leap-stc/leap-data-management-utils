@@ -87,7 +87,7 @@ class CMIPBQInterface(BQInterface):
             "instance_id": IID_entry.iid,
             "store": IID_entry.store,
             "retracted": IID_entry.retracted,
-            "tests_passed": IID_entry.tests_passed
+            "tests_passed": IID_entry.tests_passed,
             'timestamp': self._get_timestamp(),
             }
         self.insert(fields)
