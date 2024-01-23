@@ -174,7 +174,7 @@ class LogCMIPToBigQuery(beam.PTransform):
     tests_passed: bool = False
 
     def _log_to_bigquery(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
-        bq_interface = BQInterface(table_id=self.table_id)
+        bq_interface = CMIPBQInterface(table_id=self.table_id)
         iid_entry = IIDEntry(
             iid=self.iid,
             store='gs://'+ store.path, #TODO: Get the full store path from the store object
