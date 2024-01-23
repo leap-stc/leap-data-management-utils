@@ -1,1 +1,2 @@
-from .utils import LogToBigQuery, BQInterface, RegisterDatasetToCatalog
+from .utils import BQInterface, RegisterDatasetToCatalog
+from .cmip_utils import IIDEntry, CMIPBQInterface, LogCMIPToBigQuery
