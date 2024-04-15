@@ -1,1 +1,3 @@
-from .utils import LogToBigQuery, BQInterface, RegisterDatasetToCatalog
+from .utils import BQInterface, LogToBigQuery, RegisterDatasetToCatalog
+
+__all__ = ('BQInterface', 'LogToBigQuery', 'RegisterDatasetToCatalog')
