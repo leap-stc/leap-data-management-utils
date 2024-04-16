@@ -4,12 +4,12 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
-      
+
     groups:
       pypi:
         patterns:
           - "*"
-      
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
