@@ -4,12 +4,10 @@ utils that are specific to CMIP data management
 from google.cloud import bigquery
 from typing import Optional, List
 from dataclasses import dataclass
-from leap_data_management_utils.utils import BQInterface
+from leap_data_management_utils.data_management_transforms import BQInterface
 import apache_beam as beam
-import pandas as pd
 import zarr
-import datetime
-from tqdm.auto import tqdm
+import datetime 
 
 @dataclass
 class IIDEntry:
@@ -94,34 +92,23 @@ class CMIPBQInterface(BQInterface):
             }
         self.insert(fields)
 
-    def insert_multiple_iids(self, iid_entries: List[IIDEntry], batchsize: int = 10000):
+    def insert_multiple_iids(self, IID_entries: List[IIDEntry]):
         """Insert multiple rows into the table for a given list of IID_entry objects"""
         #FIXME This repeats a bunch of code from the parent class .insert() method
-        if len(iid_entries) > batchsize:
-            print("Found over 10k iid entries. Working in batches.")
-            for iid_entries_batch in tqdm([iid_entries[i:i+batchsize] for i in range(0,len(iid_entries), batchsize)]):
-                self.insert_multiple_iids(iid_entries_batch)
-        else:
-            timestamp = self._get_timestamp()
-            rows_to_insert = [
-                {
-                    "instance_id": IID_entry.iid,
-                    "store": IID_entry.store,
-                    "retracted": IID_entry.retracted,
-                    "tests_passed": IID_entry.tests_passed,
-                    "timestamp": timestamp,
-                }
-                for IID_entry in iid_entries
-            ]
-            errors = self.client.insert_rows_json(self._get_table(), rows_to_insert)
-            if errors:
-                raise RuntimeError(f"Error inserting row: {errors}")
-    
-    def insert_df(self, df: pd.DataFrame):
-        iid_entries = []
-        for _, row in df.iterrows():
-            iid_entries.append(IIDEntry(iid=row.instance_id, store=row.store, retracted=row.retracted, tests_passed=row.tests_passed))
-        self.insert_multiple_iids(iid_entries)
+        timestamp = self._get_timestamp()
+        rows_to_insert = [
+            {
+                "instance_id": IID_entry.iid,
+                "store": IID_entry.store,
+                "retracted": IID_entry.retracted,
+                "tests_passed": IID_entry.tests_passed,
+                "timestamp": timestamp,
+            }
+            for IID_entry in IID_entries
+        ]
+        errors = self.client.insert_rows_json(self._get_table(), rows_to_insert)
+        if errors:
+            raise RuntimeError(f"Error inserting row: {errors}")
 
     def _get_iid_results(self, iid: str) -> IIDResult:
         # keep this in case I ever need the row index again...
@@ -164,27 +151,17 @@ class CMIPBQInterface(BQInterface):
             iids_in_bq.extend(iids_in_bq_batch)
         ```
         """
-        if len(iids) > 10000:
-            print("Found over 10k iids. Working in batches.")
-            # If we have more than 10k iids we need to work in batches
-            # filter for iids that do not exist
-            iids_in_bq = []
-            batchsize = 10000 #10k seems to be the limit 
-            iid_batches = [iids[i:i+batchsize] for i in range(0,len(iids), batchsize)]
-            for iids_batch in tqdm(iid_batches):
-                iids_in_bq_batch = self.iid_list_exists(iids_batch)
-                iids_in_bq.extend(iids_in_bq_batch)
-            return iids_in_bq
-        else:
-            # source: https://stackoverflow.com/questions/26441928/how-do-i-check-if-multiple-values-exists-in-database
-            query = f"""
-            SELECT instance_id, store
-            FROM {self.table_id}
-            WHERE instance_id IN ({",".join([f"'{iid}'" for iid in iids])})
-            """
-            results = self._get_query_job(query).result()
-            # this is a full row iterator, for now just return the iids
-            return list(set([r["instance_id"] for r in results]))
+        assert len(iids) <= 10000
+
+        # source: https://stackoverflow.com/questions/26441928/how-do-i-check-if-multiple-values-exists-in-database
+        query = f"""
+        SELECT instance_id, store
+        FROM {self.table_id}
+        WHERE instance_id IN ({",".join([f"'{iid}'" for iid in iids])})
+        """
+        results = self._get_query_job(query).result()
+        # this is a full row iterator, for now just return the iids
+        return list(set([r["instance_id"] for r in results]))
     
 # ----------------------------------------------------------------------------------------------
 # apache Beam stages
@@ -214,4 +191,3 @@ class LogCMIPToBigQuery(beam.PTransform):
 
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
         return pcoll | beam.Map(self._log_to_bigquery)
-

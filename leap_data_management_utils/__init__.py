@@ -1,10 +1,9 @@
 
-from .utils import BQInterface, LogToBigQuery, RegisterDatasetToCatalog
-from .cmip_utils import IIDEntry, CMIPBQInterface, LogCMIPToBigQuery
+from .data_management_transforms import BQInterface, RegisterDatasetToCatalog
+from .cmip_transforms import IIDEntry, CMIPBQInterface, LogCMIPToBigQuery
 
 __all__ = (
     'BQInterface',
-    'LogToBigQuery',
     'RegisterDatasetToCatalog',
     'IIDEntry',
     'CMIPBQInterface',
