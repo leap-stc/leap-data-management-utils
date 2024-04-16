@@ -1,15 +1,15 @@
-# Note: All of this code was written by Julius Busecke and copied from this feedstock:
-# https://github.com/leap-stc/cmip6-leap-feedstock/blob/main/feedstock/recipe.py#L262
-
-from __future__ import annotations
+"""
+utils that are specific to CMIP data management
+"""
 
 import datetime
 from dataclasses import dataclass
 
 import apache_beam as beam
 import zarr
-from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
+
+from leap_data_management_utils.data_management_transforms import BQInterface
 
 
 @dataclass
@@ -21,6 +21,8 @@ class IIDEntry:
 
     iid: str
     store: str  # TODO: should this allow other objects?
+    retracted: bool
+    tests_passed: bool
 
     # Check if the iid conforms to a schema
     def __post_init__(self):
@@ -28,6 +30,10 @@ class IIDEntry:
         facets = self.iid.split('.')
         if len(facets) != len(schema.split('.')):
             raise ValueError(f'IID does not conform to CMIP6 {schema =}. Got {self.iid =}')
+        assert self.store.startswith('gs://')
+        assert self.retracted in [True, False]
+        assert self.tests_passed in [True, False]
+
         # TODO: Check each facet with the controlled CMIP vocabulary
 
         # TODO Check store validity?
@@ -49,18 +55,12 @@ class IIDResult:
             self.exists = False
 
 
-@dataclass
-class BQInterface:
+class CMIPBQInterface(BQInterface):
     """Class to read/write information from BigQuery table
     :param table_id: BigQuery table ID
     :param client: BigQuery client object
     :param result_limit: Maximum number of results to return from query
     """
-
-    table_id: str
-    client: bigquery.client.Client | None = None
-    result_limit: int | None = 10
-    schema: list | None = None
 
     def __post_init__(self):
         # TODO how do I handle the schema? This class could be used for any table, but for
@@ -71,54 +71,45 @@ class BQInterface:
                 bigquery.SchemaField('instance_id', 'STRING', mode='REQUIRED'),
                 bigquery.SchemaField('store', 'STRING', mode='REQUIRED'),
                 bigquery.SchemaField('timestamp', 'TIMESTAMP', mode='REQUIRED'),
+                bigquery.SchemaField('retracted', 'BOOL', mode='REQUIRED'),
+                bigquery.SchemaField('tests_passed', 'BOOL', mode='REQUIRED'),
             ]
-        if self.client is None:
-            self.client = bigquery.Client()
+        super().__post_init__()
 
-        # check if table exists, otherwise create it
-        try:
-            self.table = self.client.get_table(self.table_id)
-        except NotFound:
-            self.table = self.create_table()
+    def _get_timestamp(self) -> str:
+        """Get the current timestamp"""
+        return datetime.datetime.utcnow().isoformat()
 
-    def create_table(self) -> bigquery.table.Table:
-        """Create the table if it does not exist"""
-        print(f'Creating {self.table_id =}')
-        table = bigquery.Table(self.table_id, schema=self.schema)
-        table = self.client.create_table(table)  # Make an API request.
-        return table
-
-    def catalog_insert(self, dataset_id: str, dataset_url: str):
-        timestamp = datetime.datetime.now().isoformat()
-        table = self.client.get_table(self.table_id)
-
-        rows_to_insert = [
-            {
-                'dataset_id': dataset_id,
-                'dataset_url': dataset_url,
-                'timestamp': timestamp,
-            }
-        ]
-
-        errors = self.client.insert_rows_json(table, rows_to_insert)
-        if errors:
-            raise RuntimeError(f'Error inserting row: {errors}')
-
-    def insert(self, IID_entry):
+    def insert_iid(self, IID_entry):
         """Insert a row into the table for a given IID_entry object"""
-        # Generate a timestamp to add to a bigquery row
-        timestamp = datetime.datetime.now().isoformat()
-        json_row = {
+        fields = {
             'instance_id': IID_entry.iid,
             'store': IID_entry.store,
-            'timestamp': timestamp,
+            'retracted': IID_entry.retracted,
+            'tests_passed': IID_entry.tests_passed,
+            'timestamp': self._get_timestamp(),
         }
-        errors = self.client.insert_rows_json(self.table_id, [json_row])
+        self.insert(fields)
+
+    def insert_multiple_iids(self, IID_entries: list[IIDEntry]):
+        """Insert multiple rows into the table for a given list of IID_entry objects"""
+        # FIXME This repeats a bunch of code from the parent class .insert() method
+        timestamp = self._get_timestamp()
+        rows_to_insert = [
+            {
+                'instance_id': IID_entry.iid,
+                'store': IID_entry.store,
+                'retracted': IID_entry.retracted,
+                'tests_passed': IID_entry.tests_passed,
+                'timestamp': timestamp,
+            }
+            for IID_entry in IID_entries
+        ]
+        errors = self.client.insert_rows_json(self._get_table(), rows_to_insert)
         if errors:
             raise RuntimeError(f'Error inserting row: {errors}')
 
-    def _get_query_job(self, query: str) -> bigquery.job.query.QueryJob:
-        """Get result object corresponding to a given iid"""
+    def _get_iid_results(self, iid: str) -> IIDResult:
         # keep this in case I ever need the row index again...
         # query = f"""
         # WITH table_with_index AS (SELECT *, ROW_NUMBER() OVER ()-1 as row_index FROM `{self.table_id}`)
@@ -126,9 +117,6 @@ class BQInterface:
         # FROM `table_with_index`
         # WHERE instance_id='{iid}'
         # """
-        return self.client.query(query)
-
-    def _get_iid_results(self, iid: str) -> IIDResult:
         """Get the full result object for a given iid"""
         query = f"""
         SELECT *
@@ -149,7 +137,21 @@ class BQInterface:
     def iid_list_exists(self, iids: list[str]) -> list[str]:
         """More efficient way to check if a list of iids exists in the table
         Passes the entire list to a single SQL query.
-        Returns a list of iids that exist in the table"""
+        Returns a list of iids that exist in the table
+        Only supports list up to 10k elements. If you want to check more, you should
+        work in batches:
+        ```
+        iids = df['instance_id'].tolist()
+        iids_in_bq = []
+        batchsize = 10000
+        iid_batches = [iids[i : i + batchsize] for i in range(0, len(iids), batchsize)]
+        for iids_batch in tqdm(iid_batches):
+            iids_in_bq_batch = bq.iid_list_exists(iids_batch)
+            iids_in_bq.extend(iids_in_bq_batch)
+        ```
+        """
+        assert len(iids) <= 10000
+
         # source: https://stackoverflow.com/questions/26441928/how-do-i-check-if-multiple-values-exists-in-database
         query = f"""
         SELECT instance_id, store
@@ -161,39 +163,32 @@ class BQInterface:
         return list(set([r['instance_id'] for r in results]))
 
 
-# wrapper functions (not sure if this works instead of the repeated copy and paste in the transform below)
-def log_to_bq(iid: str, store: zarr.storage.FSStore, table_id: str):
-    bq_interface = BQInterface(table_id=table_id)
-    iid_entry = IIDEntry(iid=iid, store=store.path)
-    bq_interface.insert(iid_entry)
+# ----------------------------------------------------------------------------------------------
+# apache Beam stages
+# ----------------------------------------------------------------------------------------------
 
 
 @dataclass
-class LogToBigQuery(beam.PTransform):
+class LogCMIPToBigQuery(beam.PTransform):
     """
     Logging stage for data written to zarr store
     """
 
     iid: str
     table_id: str
+    retracted: bool = False
+    tests_passed: bool = False
 
     def _log_to_bigquery(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
-        log_to_bq(self.iid, store, self.table_id)
+        bq_interface = CMIPBQInterface(table_id=self.table_id)
+        iid_entry = IIDEntry(
+            iid=self.iid,
+            store='gs://' + store.path,  # TODO: Get the full store path from the store object
+            retracted=self.retracted,
+            tests_passed=self.tests_passed,
+        )
+        bq_interface.insert_iid(iid_entry)
         return store
 
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
         return pcoll | beam.Map(self._log_to_bigquery)
-
-
-@dataclass
-class RegisterDatasetToCatalog(beam.PTransform):
-    table_id: str
-    dataset_id: str
-
-    def _register_dataset_to_catalog(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
-        bq_interface = BQInterface(table_id=self.table_id)
-        bq_interface.catalog_insert(dataset_id=self.dataset_id, dataset_url=store.path)
-        return store
-
-    def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
-        return pcoll | beam.Map(self._register_dataset_to_catalog)

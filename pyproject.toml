@@ -2,7 +2,6 @@
 requires = ["setuptools>=64", "setuptools-scm[toml]>=6.2", "wheel"]
 build-backend = "setuptools.build_meta"
 
-
 [project]
 name = "leap-data-management-utils"
 dynamic = ["version"]
@@ -27,6 +26,11 @@ dependencies = [
     "google-cloud-bigquery",
     "google-api-core",
     "zarr",
+    "xarray",
+    "pangeo-forge-esgf",
+    "db_dtypes",
+    "cftime",
+    "pandas",
 ]
 
 [project.optional-dependencies]
