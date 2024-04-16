@@ -1,13 +1,15 @@
 # Note: All of this code was written by Julius Busecke and copied from this feedstock:
 # https://github.com/leap-stc/cmip6-leap-feedstock/blob/main/feedstock/recipe.py#L262
 
-from google.cloud import bigquery
-from typing import Optional, List
-from google.api_core.exceptions import NotFound
-import apache_beam as beam
-import zarr
 import datetime
 from dataclasses import dataclass
+from typing import List, Optional
+
+import apache_beam as beam
+import zarr
+from google.api_core.exceptions import NotFound
+from google.cloud import bigquery
+
 
 @dataclass
 class BQInterface:
@@ -28,9 +30,9 @@ class BQInterface:
         # for now just hardcode it
         if not self.schema:
             self.schema = [
-                bigquery.SchemaField("dataset_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("dataset_url", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
+                bigquery.SchemaField('dataset_id', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('dataset_url', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('timestamp', 'TIMESTAMP', mode='REQUIRED'),
             ]
         if self.client is None:
             self.client = bigquery.Client()
@@ -43,37 +45,38 @@ class BQInterface:
 
     def create_table(self) -> bigquery.table.Table:
         """Create the table if it does not exist"""
-        print(f"Creating {self.table_id =}")
+        print(f'Creating {self.table_id =}')
         table = bigquery.Table(self.table_id, schema=self.schema)
         self.client.create_table(table)  # Make an API request.
-    
+
     def _get_table(self) -> bigquery.table.Table:
         """Get the table object"""
         return self.client.get_table(self.table_id)
-    
+
     def insert(self, fields: dict = {}):
         timestamp = datetime.datetime.now().isoformat()
 
         rows_to_insert = [
-            fields | {"timestamp": timestamp} # timestamp is always overridden
+            fields | {'timestamp': timestamp}  # timestamp is always overridden
         ]
 
         errors = self.client.insert_rows_json(self._get_table(), rows_to_insert)
         if errors:
-            raise RuntimeError(f"Error inserting row: {errors}")
+            raise RuntimeError(f'Error inserting row: {errors}')
 
     def catalog_insert(self, dataset_id: str, dataset_url: str, extra_fields: dict = {}):
         rows_to_insert = [
             {
-                "dataset_id": dataset_id,
-                "dataset_url": dataset_url,
-            } | extra_fields
+                'dataset_id': dataset_id,
+                'dataset_url': dataset_url,
+            }
+            | extra_fields
         ]
         self.insert(rows_to_insert)
 
     def _get_query_job(self, query: str) -> bigquery.job.query.QueryJob:
         return self.client.query(query)
-    
+
     def get_all(self) -> List[bigquery.table.Row]:
         """Get all rows in the table"""
         query = f"""
@@ -81,7 +84,7 @@ class BQInterface:
         """
         results = self._get_query_job(query)
         return results.to_dataframe()
-    
+
     def get_latest(self) -> List[bigquery.table.Row]:
         """Get the latest row for all iids in the table"""
         # adopted from https://stackoverflow.com/a/1313293
@@ -93,20 +96,20 @@ class BQInterface:
         SELECT * FROM ranked_iids WHERE rn = 1;
         """
         results = self._get_query_job(query)
-        return results.to_dataframe().drop(columns=["rn"])
+        return results.to_dataframe().drop(columns=['rn'])
+
 
 # ----------------------------------------------------------------------------------------------
 # apache Beam stages
 # ----------------------------------------------------------------------------------------------
+
 
 @dataclass
 class RegisterDatasetToCatalog(beam.PTransform):
     table_id: str
     dataset_id: str
 
-    def _register_dataset_to_catalog(
-        self, store: zarr.storage.FSStore
-    ) -> zarr.storage.FSStore:
+    def _register_dataset_to_catalog(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
         bq_interface = BQInterface(table_id=self.table_id)
         bq_interface.catalog_insert(dataset_id=self.dataset_id, dataset_url=store.path)
         return store

@@ -1,13 +1,17 @@
 """
 utils that are specific to CMIP data management
 """
-from google.cloud import bigquery
-from typing import Optional, List
+
+import datetime
 from dataclasses import dataclass
-from leap_data_management_utils.data_management_transforms import BQInterface
+from typing import List
+
 import apache_beam as beam
 import zarr
-import datetime 
+from google.cloud import bigquery
+
+from leap_data_management_utils.data_management_transforms import BQInterface
+
 
 @dataclass
 class IIDEntry:
@@ -23,21 +27,17 @@ class IIDEntry:
 
     # Check if the iid conforms to a schema
     def __post_init__(self):
-        schema = "mip_era.activity_id.institution_id.source_id.experiment_id.member_id.table_id.variable_id.grid_label.version"
-        facets = self.iid.split(".")
-        if len(facets) != len(schema.split(".")):
-            raise ValueError(
-                f"IID does not conform to CMIP6 {schema =}. Got {self.iid =}"
-            )
-        assert self.store.startswith("gs://")
+        schema = 'mip_era.activity_id.institution_id.source_id.experiment_id.member_id.table_id.variable_id.grid_label.version'
+        facets = self.iid.split('.')
+        if len(facets) != len(schema.split('.')):
+            raise ValueError(f'IID does not conform to CMIP6 {schema =}. Got {self.iid =}')
+        assert self.store.startswith('gs://')
         assert self.retracted in [True, False]
         assert self.tests_passed in [True, False]
-
 
         # TODO: Check each facet with the controlled CMIP vocabulary
 
         # TODO Check store validity?
-
 
 
 @dataclass
@@ -69,11 +69,11 @@ class CMIPBQInterface(BQInterface):
         # for now just hardcode it
         if not self.schema:
             self.schema = [
-                bigquery.SchemaField("instance_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("store", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
-                bigquery.SchemaField("retracted", "BOOL", mode="REQUIRED"),
-                bigquery.SchemaField("tests_passed", "BOOL", mode="REQUIRED"),
+                bigquery.SchemaField('instance_id', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('store', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('timestamp', 'TIMESTAMP', mode='REQUIRED'),
+                bigquery.SchemaField('retracted', 'BOOL', mode='REQUIRED'),
+                bigquery.SchemaField('tests_passed', 'BOOL', mode='REQUIRED'),
             ]
         super().__post_init__()
 
@@ -84,31 +84,31 @@ class CMIPBQInterface(BQInterface):
     def insert_iid(self, IID_entry):
         """Insert a row into the table for a given IID_entry object"""
         fields = {
-            "instance_id": IID_entry.iid,
-            "store": IID_entry.store,
-            "retracted": IID_entry.retracted,
-            "tests_passed": IID_entry.tests_passed,
+            'instance_id': IID_entry.iid,
+            'store': IID_entry.store,
+            'retracted': IID_entry.retracted,
+            'tests_passed': IID_entry.tests_passed,
             'timestamp': self._get_timestamp(),
-            }
+        }
         self.insert(fields)
 
     def insert_multiple_iids(self, IID_entries: List[IIDEntry]):
         """Insert multiple rows into the table for a given list of IID_entry objects"""
-        #FIXME This repeats a bunch of code from the parent class .insert() method
+        # FIXME This repeats a bunch of code from the parent class .insert() method
         timestamp = self._get_timestamp()
         rows_to_insert = [
             {
-                "instance_id": IID_entry.iid,
-                "store": IID_entry.store,
-                "retracted": IID_entry.retracted,
-                "tests_passed": IID_entry.tests_passed,
-                "timestamp": timestamp,
+                'instance_id': IID_entry.iid,
+                'store': IID_entry.store,
+                'retracted': IID_entry.retracted,
+                'tests_passed': IID_entry.tests_passed,
+                'timestamp': timestamp,
             }
             for IID_entry in IID_entries
         ]
         errors = self.client.insert_rows_json(self._get_table(), rows_to_insert)
         if errors:
-            raise RuntimeError(f"Error inserting row: {errors}")
+            raise RuntimeError(f'Error inserting row: {errors}')
 
     def _get_iid_results(self, iid: str) -> IIDResult:
         # keep this in case I ever need the row index again...
@@ -145,7 +145,7 @@ class CMIPBQInterface(BQInterface):
         iids = df['instance_id'].tolist()
         iids_in_bq = []
         batchsize = 10000
-        iid_batches = [iids[i:i+batchsize] for i in range(0,len(iids), batchsize)]
+        iid_batches = [iids[i : i + batchsize] for i in range(0, len(iids), batchsize)]
         for iids_batch in tqdm(iid_batches):
             iids_in_bq_batch = bq.iid_list_exists(iids_batch)
             iids_in_bq.extend(iids_in_bq_batch)
@@ -161,12 +161,14 @@ class CMIPBQInterface(BQInterface):
         """
         results = self._get_query_job(query).result()
         # this is a full row iterator, for now just return the iids
-        return list(set([r["instance_id"] for r in results]))
-    
+        return list(set([r['instance_id'] for r in results]))
+
+
 # ----------------------------------------------------------------------------------------------
 # apache Beam stages
 # ----------------------------------------------------------------------------------------------
-    
+
+
 @dataclass
 class LogCMIPToBigQuery(beam.PTransform):
     """
@@ -182,10 +184,10 @@ class LogCMIPToBigQuery(beam.PTransform):
         bq_interface = CMIPBQInterface(table_id=self.table_id)
         iid_entry = IIDEntry(
             iid=self.iid,
-            store='gs://'+ store.path, #TODO: Get the full store path from the store object
+            store='gs://' + store.path,  # TODO: Get the full store path from the store object
             retracted=self.retracted,
-            tests_passed=self.tests_passed
-            )
+            tests_passed=self.tests_passed,
+        )
         bq_interface.insert_iid(iid_entry)
         return store
 

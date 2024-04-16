@@ -7,7 +7,7 @@ dependencies:
   - pandas
   - pip
   - pip:
-    - apache-beam[gcp]
-    - google-cloud-bigquery
-    - zarr
-    - db_dtypes
+      - apache-beam[gcp]
+      - google-cloud-bigquery
+      - zarr
+      - db_dtypes
