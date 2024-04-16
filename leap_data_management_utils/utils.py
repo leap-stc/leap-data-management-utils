@@ -1,13 +1,15 @@
 # Note: All of this code was written by Julius Busecke and copied from this feedstock:
 # https://github.com/leap-stc/cmip6-leap-feedstock/blob/main/feedstock/recipe.py#L262
 
-from google.cloud import bigquery
-from typing import Optional, List
-from google.api_core.exceptions import NotFound
-import apache_beam as beam
-import zarr
+from __future__ import annotations
+
 import datetime
 from dataclasses import dataclass
+
+import apache_beam as beam
+import zarr
+from google.api_core.exceptions import NotFound
+from google.cloud import bigquery
 
 
 @dataclass
@@ -22,12 +24,10 @@ class IIDEntry:
 
     # Check if the iid conforms to a schema
     def __post_init__(self):
-        schema = "mip_era.activity_id.institution_id.source_id.experiment_id.member_id.table_id.variable_id.grid_label.version"
-        facets = self.iid.split(".")
-        if len(facets) != len(schema.split(".")):
-            raise ValueError(
-                f"IID does not conform to CMIP6 {schema =}. Got {self.iid =}"
-            )
+        schema = 'mip_era.activity_id.institution_id.source_id.experiment_id.member_id.table_id.variable_id.grid_label.version'
+        facets = self.iid.split('.')
+        if len(facets) != len(schema.split('.')):
+            raise ValueError(f'IID does not conform to CMIP6 {schema =}. Got {self.iid =}')
         # TODO: Check each facet with the controlled CMIP vocabulary
 
         # TODO Check store validity?
@@ -58,9 +58,9 @@ class BQInterface:
     """
 
     table_id: str
-    client: Optional[bigquery.client.Client] = None
-    result_limit: Optional[int] = 10
-    schema: Optional[list] = None
+    client: bigquery.client.Client | None = None
+    result_limit: int | None = 10
+    schema: list | None = None
 
     def __post_init__(self):
         # TODO how do I handle the schema? This class could be used for any table, but for
@@ -68,9 +68,9 @@ class BQInterface:
         # for now just hardcode it
         if not self.schema:
             self.schema = [
-                bigquery.SchemaField("instance_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("store", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
+                bigquery.SchemaField('instance_id', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('store', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('timestamp', 'TIMESTAMP', mode='REQUIRED'),
             ]
         if self.client is None:
             self.client = bigquery.Client()
@@ -83,7 +83,7 @@ class BQInterface:
 
     def create_table(self) -> bigquery.table.Table:
         """Create the table if it does not exist"""
-        print(f"Creating {self.table_id =}")
+        print(f'Creating {self.table_id =}')
         table = bigquery.Table(self.table_id, schema=self.schema)
         table = self.client.create_table(table)  # Make an API request.
         return table
@@ -94,28 +94,28 @@ class BQInterface:
 
         rows_to_insert = [
             {
-                "dataset_id": dataset_id,
-                "dataset_url": dataset_url,
-                "timestamp": timestamp,
+                'dataset_id': dataset_id,
+                'dataset_url': dataset_url,
+                'timestamp': timestamp,
             }
         ]
 
         errors = self.client.insert_rows_json(table, rows_to_insert)
         if errors:
-            raise RuntimeError(f"Error inserting row: {errors}")
+            raise RuntimeError(f'Error inserting row: {errors}')
 
     def insert(self, IID_entry):
         """Insert a row into the table for a given IID_entry object"""
         # Generate a timestamp to add to a bigquery row
         timestamp = datetime.datetime.now().isoformat()
         json_row = {
-            "instance_id": IID_entry.iid,
-            "store": IID_entry.store,
-            "timestamp": timestamp,
+            'instance_id': IID_entry.iid,
+            'store': IID_entry.store,
+            'timestamp': timestamp,
         }
         errors = self.client.insert_rows_json(self.table_id, [json_row])
         if errors:
-            raise RuntimeError(f"Error inserting row: {errors}")
+            raise RuntimeError(f'Error inserting row: {errors}')
 
     def _get_query_job(self, query: str) -> bigquery.job.query.QueryJob:
         """Get result object corresponding to a given iid"""
@@ -146,7 +146,7 @@ class BQInterface:
         """Check if iid exists in the table"""
         return self._get_iid_results(iid).exists
 
-    def iid_list_exists(self, iids: List[str]) -> List[str]:
+    def iid_list_exists(self, iids: list[str]) -> list[str]:
         """More efficient way to check if a list of iids exists in the table
         Passes the entire list to a single SQL query.
         Returns a list of iids that exist in the table"""
@@ -158,7 +158,7 @@ class BQInterface:
         """
         results = self._get_query_job(query).result()
         # this is a full row iterator, for now just return the iids
-        return list(set([r["instance_id"] for r in results]))
+        return list(set([r['instance_id'] for r in results]))
 
 
 # wrapper functions (not sure if this works instead of the repeated copy and paste in the transform below)
@@ -190,9 +190,7 @@ class RegisterDatasetToCatalog(beam.PTransform):
     table_id: str
     dataset_id: str
 
-    def _register_dataset_to_catalog(
-        self, store: zarr.storage.FSStore
-    ) -> zarr.storage.FSStore:
+    def _register_dataset_to_catalog(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
         bq_interface = BQInterface(table_id=self.table_id)
         bq_interface.catalog_insert(dataset_id=self.dataset_id, dataset_url=store.path)
         return store
