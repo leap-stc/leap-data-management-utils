@@ -95,7 +95,6 @@ def collect_feedstocks(path: upath.UPath) -> list[upath.UPath]:
     url = convert_to_raw_github_url(path)
     if not (feedstocks := yaml.safe_load(upath.UPath(url).read_text())['feedstocks']):
         raise FileNotFoundError(f'No YAML files (.yaml or .yml) found in {path}')
-    print(feedstocks)
     return feedstocks
 
 
