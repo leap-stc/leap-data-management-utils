@@ -99,7 +99,7 @@ def collect_feedstocks(path: upath.UPath) -> list[upath.UPath]:
     return feedstocks
 
 
-def validate_feedstocks(*, feedstocks: upath.UPath) -> list[Feedstock]:
+def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
     def format_report(title: str, feedstocks: list[dict], include_traceback: bool = False) -> str:
         report = f'{title} ({len(feedstocks)})\n'
         if not feedstocks:
@@ -136,22 +136,47 @@ def validate_feedstocks(*, feedstocks: upath.UPath) -> list[Feedstock]:
     return catalog
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Utilities for cataloging feedstocks for LEAP')
-    parser.add_argument(
-        '--path', type=str, help='Path to the feedstocks input YAML file', required=True
-    )
-    parser.add_argument('--output', type=str, help='Path to the output directory', required=True)
-    args = parser.parse_args()
+def validate(args):
+    feedstocks = collect_feedstocks(args.path)
+    validate_feedstocks(feedstocks=feedstocks)
+
+
+def generate(args):
     feedstocks = collect_feedstocks(args.path)
     catalog = validate_feedstocks(feedstocks=feedstocks)
     output = upath.UPath(args.output).resolve() / 'output'
     output.mkdir(parents=True, exist_ok=True)
-
-    # write catalog to JSON file for use in the website
     with open(f'{output}/consolidated-web-catalog.json', 'w') as f:
         json.dump(catalog, f, indent=2, default=pydantic_core.to_jsonable_python)
         print(f'Catalog written to {output}/consolidated-web-catalog.json')
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Utilities for cataloging feedstocks for LEAP')
+    subparsers = parser.add_subparsers(help='sub-command help')
+
+    # Subparser for the "validate" command
+    parser_validate = subparsers.add_parser('validate', help='Validate the feedstocks')
+    parser_validate.add_argument(
+        '--path', type=str, required=True, help='Path to the feedstocks input YAML file'
+    )
+    parser_validate.set_defaults(func=validate)
+
+    # Subparser for the "generate" command
+    parser_generate = subparsers.add_parser('generate', help='Generate the catalog')
+    parser_generate.add_argument(
+        '--path', type=str, required=True, help='Path to the feedstocks input YAML file'
+    )
+    parser_generate.add_argument(
+        '--output', type=str, required=True, help='Path to the output directory'
+    )
+    parser_generate.set_defaults(func=generate)
+
+    args = parser.parse_args()
+    if hasattr(args, 'func'):
+        args.func(args)
+    else:
+        parser.print_help()
 
 
 if __name__ == '__main__':
