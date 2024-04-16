@@ -99,18 +99,19 @@ def collect_feedstocks(path: upath.UPath) -> list[upath.UPath]:
     return feedstocks
 
 
-def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
-    def format_report(title: str, feedstocks: list[dict], include_traceback: bool = False) -> str:
-        report = f'{title} ({len(feedstocks)})\n'
-        if not feedstocks:
-            report += '  🚀 None found\n'
-        else:
-            for entry in feedstocks:
-                report += f"  📂 {entry['feedstock']}\n"
-                if include_traceback:
-                    report += f"    🔎 {entry['traceback']}\n"
-        return report
+def format_report(title: str, feedstocks: list[dict], include_traceback: bool = False) -> str:
+    report = f'{title} ({len(feedstocks)})\n'
+    if not feedstocks:
+        report += '  🚀 None found\n'
+    else:
+        for entry in feedstocks:
+            report += f"  📂 {entry['feedstock']}\n"
+            if include_traceback:
+                report += f"    🔎 {entry['traceback']}\n"
+    return report
 
+
+def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
     errors = []
     valid = []
     catalog = []
@@ -137,8 +138,27 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
 
 
 def validate(args):
-    feedstocks = collect_feedstocks(args.path)
-    validate_feedstocks(feedstocks=feedstocks)
+    if args.single:
+        # If single file path is provided, validate just this one feedstock
+        try:
+            _ = Feedstock.from_yaml(convert_to_raw_github_url(args.single))
+            print(
+                format_report(
+                    '✅ Valid feedstock:', [{'feedstock': str(args.single), 'status': 'valid'}]
+                )
+            )
+        except Exception:
+            print(
+                format_report(
+                    '❌ Invalid feedstock:',
+                    [{'feedstock': str(args.single), 'traceback': traceback.format_exc()}],
+                    include_traceback=True,
+                )
+            )
+    else:
+        # Default behavior, processing all feedstocks from directory
+        feedstocks = collect_feedstocks(args.path)
+        validate_feedstocks(feedstocks=feedstocks)
 
 
 def generate(args):
@@ -157,8 +177,10 @@ def main():
 
     # Subparser for the "validate" command
     parser_validate = subparsers.add_parser('validate', help='Validate the feedstocks')
-    parser_validate.add_argument(
-        '--path', type=str, required=True, help='Path to the feedstocks input YAML file'
+    group = parser_validate.add_mutually_exclusive_group(required=True)
+    group.add_argument('--path', type=str, help='Path to the feedstocks input YAML file')
+    group.add_argument(
+        '--single', type=str, help='Path to a single feedstock YAML file to validate'
     )
     parser_validate.set_defaults(func=validate)
 

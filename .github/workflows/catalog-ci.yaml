@@ -33,6 +33,7 @@ jobs:
       - name: Validate Feedstocks and Generate Catalog
         run: |
           leap-catalog --help
+          leap-catalog validate --single https://github.com/leap-stc/proto_feedstock/blob/main/feedstock/catalog.yaml
           leap-catalog generate --path https://raw.githubusercontent.com/leap-stc/data-management/staging/catalog/input.yaml --output catalog/
           cat catalog/output/consolidated-web-catalog.json | jq
 
