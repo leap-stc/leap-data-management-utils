@@ -3,7 +3,7 @@
 
 import datetime
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 import apache_beam as beam
 import zarr
@@ -77,7 +77,7 @@ class BQInterface:
     def _get_query_job(self, query: str) -> bigquery.job.query.QueryJob:
         return self.client.query(query)
 
-    def get_all(self) -> List[bigquery.table.Row]:
+    def get_all(self) -> list[bigquery.table.Row]:
         """Get all rows in the table"""
         query = f"""
         SELECT * FROM {self.table_id};
@@ -85,7 +85,7 @@ class BQInterface:
         results = self._get_query_job(query)
         return results.to_dataframe()
 
-    def get_latest(self) -> List[bigquery.table.Row]:
+    def get_latest(self) -> list[bigquery.table.Row]:
         """Get the latest row for all iids in the table"""
         # adopted from https://stackoverflow.com/a/1313293
         query = f"""

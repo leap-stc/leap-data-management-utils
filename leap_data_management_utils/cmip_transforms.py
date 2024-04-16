@@ -4,7 +4,6 @@ utils that are specific to CMIP data management
 
 import datetime
 from dataclasses import dataclass
-from typing import List
 
 import apache_beam as beam
 import zarr
@@ -92,7 +91,7 @@ class CMIPBQInterface(BQInterface):
         }
         self.insert(fields)
 
-    def insert_multiple_iids(self, IID_entries: List[IIDEntry]):
+    def insert_multiple_iids(self, IID_entries: list[IIDEntry]):
         """Insert multiple rows into the table for a given list of IID_entry objects"""
         # FIXME This repeats a bunch of code from the parent class .insert() method
         timestamp = self._get_timestamp()
@@ -135,7 +134,7 @@ class CMIPBQInterface(BQInterface):
         """Check if iid exists in the table"""
         return self._get_iid_results(iid).exists
 
-    def iid_list_exists(self, iids: List[str]) -> List[str]:
+    def iid_list_exists(self, iids: list[str]) -> list[str]:
         """More efficient way to check if a list of iids exists in the table
         Passes the entire list to a single SQL query.
         Returns a list of iids that exist in the table
