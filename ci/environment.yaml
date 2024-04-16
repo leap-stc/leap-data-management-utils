@@ -1,0 +1,27 @@
+name: leap-data-management
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10
+  - aiohttp
+  - apache-beam
+  - black
+  - cftime
+  - google-cloud-bigquery
+  - fsspec >= 2023.2
+  - gcsfs
+  - google-api-core
+  - pangeo-forge-recipes
+  - pre-commit
+  - pydantic-core
+  - pydantic>=2
+  - pytest
+  - pyyaml
+  - ruff
+  - s3fs
+  - universal_pathlib
+  - zarr
+  - pip:
+      - db_dtypes
+      - pangeo-forge-esgf
