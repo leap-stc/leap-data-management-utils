@@ -38,6 +38,9 @@ test = [
     "pre-commit",
 ]
 
+[tool.setuptools_scm]
+write_to = "leap-data-management-utils/_version.py"
+write_to_template = "__version__ = '{version}'"
 
 [tool.ruff]
 line-length = 100
