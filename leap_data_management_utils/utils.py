@@ -1,13 +1,15 @@
 # Note: All of this code was written by Julius Busecke and copied from this feedstock:
 # https://github.com/leap-stc/cmip6-leap-feedstock/blob/main/feedstock/recipe.py#L262
 
-from google.cloud import bigquery
-from typing import Optional, List
-from google.api_core.exceptions import NotFound
-import apache_beam as beam
-import zarr
+from __future__ import annotations
+
 import datetime
 from dataclasses import dataclass
+import apache_beam as beam
+import zarr
+from google.api_core.exceptions import NotFound
+from google.cloud import bigquery
+
 
 @dataclass
 class BQInterface:
@@ -18,9 +20,9 @@ class BQInterface:
     """
 
     table_id: str
-    client: Optional[bigquery.client.Client] = None
-    result_limit: Optional[int] = 10
-    schema: Optional[list] = None
+    client: bigquery.client.Client | None = None
+    result_limit: int | None = 10
+    schema: list | None = None
 
     def __post_init__(self):
         # TODO how do I handle the schema? This class could be used for any table, but for
@@ -28,9 +30,9 @@ class BQInterface:
         # for now just hardcode it
         if not self.schema:
             self.schema = [
-                bigquery.SchemaField("dataset_id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("dataset_url", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
+                bigquery.SchemaField('instance_id', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('store', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('timestamp', 'TIMESTAMP', mode='REQUIRED'),
             ]
         if self.client is None:
             self.client = bigquery.Client()
@@ -43,7 +45,7 @@ class BQInterface:
 
     def create_table(self) -> bigquery.table.Table:
         """Create the table if it does not exist"""
-        print(f"Creating {self.table_id =}")
+        print(f'Creating {self.table_id =}')
         table = bigquery.Table(self.table_id, schema=self.schema)
         self.client.create_table(table)  # Make an API request.
     
@@ -104,9 +106,7 @@ class RegisterDatasetToCatalog(beam.PTransform):
     table_id: str
     dataset_id: str
 
-    def _register_dataset_to_catalog(
-        self, store: zarr.storage.FSStore
-    ) -> zarr.storage.FSStore:
+    def _register_dataset_to_catalog(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
         bq_interface = BQInterface(table_id=self.table_id)
         bq_interface.catalog_insert(dataset_id=self.dataset_id, dataset_url=store.path)
         return store
