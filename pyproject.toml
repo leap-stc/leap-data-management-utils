@@ -23,20 +23,32 @@ classifiers = [
 ]
 dependencies = [
     "apache-beam",
-    "google-cloud-bigquery",
-    "google-api-core",
-    "zarr",
-    "xarray",
-    "pangeo-forge-esgf",
-    "db_dtypes",
     "cftime",
+    "db_dtypes",
+    "google-api-core",
+    "google-cloud-bigquery",
     "pandas",
+    "pangeo-forge-esgf",
+    "pydantic-core",
+    "pydantic>=2",
+    "pyyaml",
+    "universal-pathlib",
+    "xarray",
+    "zarr",
 ]
 
 [project.optional-dependencies]
 test = [
     "pre-commit",
 ]
+
+
+[project.scripts]
+leap-catalog = "leap_data_management_utils.catalog:main"
+
+
+[tool.setuptools.packages.find]
+include = ["leap_data_management_utils*"]
 
 [tool.setuptools_scm]
 write_to = "leap_data_management_utils/_version.py"
