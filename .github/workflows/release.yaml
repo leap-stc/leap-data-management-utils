@@ -8,10 +8,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.repository == 'leap-stc/leap-data-management-utils'
-    with:
-          fetch-depth: 0
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
