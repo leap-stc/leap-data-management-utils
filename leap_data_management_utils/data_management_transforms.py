@@ -124,21 +124,24 @@ class Copy(beam.PTransform):
 
     def _copy(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
         import os
-
-        import gcsfs
         import zarr
+        import gcsfs
 
         # We do need the gs:// prefix?
         # TODO: Determine this dynamically from zarr.storage.FSStore
-        source = f'gs://{os.path.normpath(store.path)}/'  # FIXME more elegant. `.copytree` needs trailing slash
-        fs = gcsfs.GCSFileSystem()  # FIXME: How can we generalize this?
-        fs.cp(source, self.target, recursive=True)
-        # return a new store with the new path that behaves exactly like the input
-        # to this stage (so we can slot this stage right before testing/logging stages)
-        return zarr.storage.FSStore(self.target)
+        source = f"gs://{os.path.normpath(store.path)}/"  # FIXME more elegant. `.copytree` needs trailing slash
+        if self.target is False:
+            # dont do anything
+            return store
+        else:
+            fs = gcsfs.GCSFileSystem()  # FIXME: How can we generalize this?
+            fs.cp(source, self.target, recursive=True)
+            # return a new store with the new path that behaves exactly like the input
+            # to this stage (so we can slot this stage right before testing/logging stages)
+            return zarr.storage.FSStore(self.target)
 
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
-        return pcoll | 'Copying Store' >> beam.Map(self._copy)
+        return pcoll | "Copying Store" >> beam.Map(self._copy)
 
 
 @dataclass
