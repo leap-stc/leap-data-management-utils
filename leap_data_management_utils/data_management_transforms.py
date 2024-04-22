@@ -1,55 +1,54 @@
 # Note: All of this code was written by Julius Busecke and copied from this feedstock:
 # https://github.com/leap-stc/cmip6-leap-feedstock/blob/main/feedstock/recipe.py#L262
 
-from datetime import datetime, timezone
 from dataclasses import dataclass
-from typing import Optional, Dict 
+from datetime import datetime, timezone
+from typing import Dict, Optional
 
 import apache_beam as beam
 import zarr
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
-
 from ruamel.yaml import YAML
 
-yaml = YAML(typ="safe")
+yaml = YAML(typ='safe')
 
 
 import subprocess
 
+
 def get_github_commit_url() -> Optional[str]:
     """Get the GitHub commit URL for the current commit"""
     # Get GitHub Server URL
-    github_server_url = "https://github.com"
+    github_server_url = 'https://github.com'
 
     # Get the repository's remote origin URL
     try:
         repo_origin_url = subprocess.check_output(
-            ["git", "config", "--get", "remote.origin.url"], text=True
+            ['git', 'config', '--get', 'remote.origin.url'], text=True
         ).strip()
 
         # Extract the repository path from the remote URL
-        repository_path = repo_origin_url.split("github.com/")[-1].replace(".git", "")
+        repository_path = repo_origin_url.split('github.com/')[-1].replace('.git', '')
 
         # Get the current commit SHA
-        commit_sha = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True
-        ).strip()
+        commit_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
 
         # Construct the GitHub commit URL
-        git_url_hash = f"{github_server_url}/{repository_path}/commit/{commit_sha}"
+        git_url_hash = f'{github_server_url}/{repository_path}/commit/{commit_sha}'
 
         # Output the GitHub commit URL
         return git_url_hash
 
     except subprocess.CalledProcessError as e:
-        print("Error executing Git command:", e)
+        print('Error executing Git command:', e)
         return None
 
-def get_catalog_store_urls(catalog_yaml_path:str) -> Dict[str, str]:
+
+def get_catalog_store_urls(catalog_yaml_path: str) -> Dict[str, str]:
     with open(catalog_yaml_path) as f:
         catalog_meta = yaml.load(f)
-    return {d["id"]: d["url"] for d in catalog_meta}
+    return {d['id']: d['url'] for d in catalog_meta}
 
 
 @dataclass
@@ -161,8 +160,8 @@ class RegisterDatasetToCatalog(beam.PTransform):
 
 @dataclass
 class Copy(beam.PTransform):
-    """Copy a store to a new location. If the target input is False, do nothing.
-    """
+    """Copy a store to a new location. If the target input is False, do nothing."""
+
     target: str
 
     def _copy(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
@@ -199,8 +198,8 @@ class InjectAttrs(beam.PTransform):
             git_url_hash = get_github_commit_url()
             timestamp = datetime.now(timezone.utc).isoformat()
             provenance_dict = {
-                "pangeo_forge_build_git_hash": git_url_hash,
-                "pangeo_forge_build_timestamp": timestamp,
+                'pangeo_forge_build_git_hash': git_url_hash,
+                'pangeo_forge_build_timestamp': timestamp,
             }
             self.inject_attrs.update(provenance_dict)
 
