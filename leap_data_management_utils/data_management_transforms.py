@@ -46,7 +46,7 @@ def get_github_commit_url() -> Optional[str]:
 def get_catalog_store_urls(catalog_yaml_path: str) -> dict[str, str]:
     with open(catalog_yaml_path) as f:
         catalog_meta = yaml.load(f)
-    return {d['id']: d['url'] for d in catalog_meta}
+    return {d['id']: d['url'] for d in catalog_meta['stores']}
 
 
 @dataclass

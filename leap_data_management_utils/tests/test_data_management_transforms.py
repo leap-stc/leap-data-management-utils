@@ -22,9 +22,11 @@ def test_get_github_commit_url():
 def test_get_catalog_store_urls(tmp_path):
     # Create a temporary text file
     temp_file = tmp_path / 'some-name.yaml'
-    stores = [{'id': 'a', 'url': 'a-url', 'some_other': 'stuff'}, {'id': 'b', 'url': 'b-url'}]
+    data = {
+        'stores': [{'id': 'a', 'url': 'a-url', 'some_other': 'stuff'}, {'id': 'b', 'url': 'b-url'}]
+    }
     with open(temp_file, 'w') as f:
-        yaml.dump(stores, f)
+        yaml.dump(data, f)
 
     # Call the function to read the file
     content = get_catalog_store_urls(temp_file)
