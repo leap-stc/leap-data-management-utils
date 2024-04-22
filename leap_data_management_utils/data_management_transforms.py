@@ -187,11 +187,14 @@ class Copy(beam.PTransform):
 
 @dataclass
 class InjectAttrs(beam.PTransform):
-    inject_attrs: dict
+    inject_attrs: dict = None
     add_provenance: bool = True
 
     # add a post_init method to add the provenance attributes
     def __post_init__(self):
+        if self.inject_attrs is None:
+            self.inject_attrs = {}
+
         if self.add_provenance:
             git_url_hash = get_github_commit_url()
             timestamp = datetime.now(timezone.utc).isoformat()
