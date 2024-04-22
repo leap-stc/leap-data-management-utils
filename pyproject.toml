@@ -32,6 +32,7 @@ dependencies = [
     "pydantic-core",
     "pydantic>=2",
     "pyyaml",
+    "ruamel.yaml",
     "universal-pathlib",
     "xarray",
     "zarr",
