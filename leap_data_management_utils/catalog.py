@@ -5,6 +5,7 @@ import traceback
 import pydantic
 import pydantic_core
 import upath
+import xarray as xr
 import yaml
 
 
@@ -13,6 +14,7 @@ class Store(pydantic.BaseModel):
     name: str = pydantic.Field(None, description='Name of the store')
     url: str = pydantic.Field(..., description='URL of the store')
     rechunking: list[dict[str, str]] | None = pydantic.Field(None, alias='ncviewjs:rechunking')
+    public: bool | None = pydantic.Field(None, description='Whether the store is public')
 
 
 class Link(pydantic.BaseModel):
@@ -118,6 +120,10 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
     for feedstock in feedstocks:
         try:
             feed = Feedstock.from_yaml(convert_to_raw_github_url(feedstock))
+            print('🔄 Checking stores')
+            for index, store in enumerate(feed.stores):
+                print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
+                feed.stores[index].public = is_store_public(store.url)
             valid.append({'feedstock': str(feedstock), 'status': 'valid'})
             catalog.append(feed)
         except Exception:
@@ -134,6 +140,15 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
         raise ValidationError('Validation failed')
 
     return catalog
+
+
+def is_store_public(store) -> bool:
+    try:
+        xr.open_dataset(store, engine='zarr', chunks={})
+        return True
+    except Exception:
+        print(f'Store {store} is not public')
+        return False
 
 
 def validate(args):
