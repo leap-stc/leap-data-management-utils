@@ -148,7 +148,6 @@ def is_store_public(store) -> bool:
         return True
     except Exception:
         print(f'Store {store} is not public')
-        # print(traceback.format_exc())
         return False
 
 
