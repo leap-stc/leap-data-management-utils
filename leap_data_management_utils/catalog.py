@@ -4,9 +4,27 @@ import traceback
 
 import pydantic
 import pydantic_core
+import requests
 import upath
-import xarray as xr
 import yaml
+
+
+def s3_to_https(s3_url: str) -> str:
+    # Split the URL into its components
+    s3_parts = s3_url.split('/')
+
+    # Get the bucket name from the first part of the URL
+    bucket_name = s3_parts[2]
+
+    # Join the remaining parts of the URL to form the path to the file
+    path = '/'.join(s3_parts[3:])
+
+    # Return the HTTPS URL in the desired format
+    return f'https://{bucket_name}.s3.amazonaws.com/{path}'
+
+
+def gs_to_https(gs_url: str) -> str:
+    return gs_url.replace('gs://', 'https://storage.googleapis.com/')
 
 
 class Store(pydantic.BaseModel):
@@ -123,7 +141,7 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
             print('🔄 Checking stores')
             for index, store in enumerate(feed.stores):
                 print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
-                feed.stores[index].public = is_store_public(store.url)
+                feed.stores[index].public = is_store_public(store.rechunking or store.url)
             valid.append({'feedstock': str(feedstock), 'status': 'valid'})
             catalog.append(feed)
         except Exception:
@@ -144,10 +162,29 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
 
 def is_store_public(store) -> bool:
     try:
-        xr.open_dataset(store, engine='zarr', chunks={})
+        if store.startswith('s3://'):
+            url = s3_to_https(store)
+
+        elif store.startswith('gs://'):
+            url = gs_to_https(store)
+        else:
+            url = store
+
+        url = url.strip('/')
+
+        path = f'{url}/.zmetadata'
+
+        response = requests.get(path)
+        response.raise_for_status()
         return True
-    except Exception:
-        print(f'Store {store} is not public')
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            print(f'Resource not found at {path}.')
+        else:
+            print(f'HTTP error {e.response.status_code} for {path}.')
+        return False
+    except Exception as e:
+        print(f'An error occurred while checking if store {store} is public: {str(e)}')
         return False
 
 
