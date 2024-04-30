@@ -1,6 +1,6 @@
 import pytest
 
-from leap_data_management_utils.cmip_transforms import IIDEntry
+from leap_data_management_utils.cmip_transforms import IIDEntry, Preprocessor, TestDataset
 
 
 class TestIIDEntry:
