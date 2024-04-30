@@ -210,12 +210,10 @@ class Preprocessor(beam.PTransform):
         Set them all to coords
         """
         index, ds = item
-        print(f"Preprocessing before {ds =}")
-        new_coords_vars = [
-            var for var in ds.data_vars if var != ds.attrs["variable_id"]
-        ]
+        print(f'Preprocessing before {ds =}')
+        new_coords_vars = [var for var in ds.data_vars if var != ds.attrs['variable_id']]
         ds = ds.set_coords(new_coords_vars)
-        print(f"Preprocessing after {ds =}")
+        print(f'Preprocessing after {ds =}')
         return index, ds
 
     @staticmethod
@@ -224,10 +222,10 @@ class Preprocessor(beam.PTransform):
         index, ds = item
         for att, att_value in ds.attrs.items():
             if isinstance(att_value, str):
-                new_value = att_value.encode("utf-8", "ignore").decode()
+                new_value = att_value.encode('utf-8', 'ignore').decode()
                 if new_value != att_value:
                     print(
-                        f"Sanitized datasets attributes field {att}: \n {att_value} \n ----> \n {new_value}"
+                        f'Sanitized datasets attributes field {att}: \n {att_value} \n ----> \n {new_value}'
                     )
                     ds.attrs[att] = new_value
         return index, ds
@@ -235,8 +233,8 @@ class Preprocessor(beam.PTransform):
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
         return (
             pcoll
-            | "Fix coordinates" >> beam.Map(self._keep_only_variable_id)
-            | "Sanitize Attrs" >> beam.Map(self._sanitize_attrs)
+            | 'Fix coordinates' >> beam.Map(self._keep_only_variable_id)
+            | 'Sanitize Attrs' >> beam.Map(self._sanitize_attrs)
         )
 
 
@@ -253,4 +251,4 @@ class TestDataset(beam.PTransform):
         return store
 
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
-        return pcoll | "Testing - Running all tests" >> beam.Map(self._test)
+        return pcoll | 'Testing - Running all tests' >> beam.Map(self._test)
