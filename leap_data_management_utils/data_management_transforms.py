@@ -22,7 +22,7 @@ def get_github_actions_url() -> str:
         repository = os.getenv('GITHUB_REPOSITORY')
         run_id = os.getenv('GITHUB_RUN_ID')
         commit_hash = os.getenv('GITHUB_SHA')
-        
+
         if server_url and repository and run_id and commit_hash:
             return f"{server_url}/{repository}/actions/runs/{run_id}"
         else:
@@ -32,7 +32,7 @@ def get_github_actions_url() -> str:
 def get_github_commit_url() -> str:
     """Get the GitHub commit URL for the current commit"""
     # Get GitHub Server URL
-    
+
 
     # check if this is running from within a github action
     if os.getenv('GITHUB_ACTIONS') == 'true':
@@ -41,7 +41,7 @@ def get_github_commit_url() -> str:
         repository = os.getenv('GITHUB_REPOSITORY')
         run_id = os.getenv('GITHUB_RUN_ID')
         commit_hash = os.getenv('GITHUB_SHA')
-        
+
         if server_url and repository and run_id and commit_hash:
             git_url_hash = f"{server_url}/{repository}/commit/{commit_hash}"
         else:
@@ -57,13 +57,13 @@ def get_github_commit_url() -> str:
             repo_origin_url = subprocess.check_output(
                 ['git', 'config', '--get', 'remote.origin.url'], text=True
             ).strip()
-    
+
             # Extract the repository path from the remote URL
             repository_path = repo_origin_url.split('github.com/')[-1].replace('.git', '')
-    
+
             # Get the current commit SHA
             commit_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-    
+
             # Construct the GitHub commit URL
             git_url_hash = f'{github_server_url}/{repository_path}/commit/{commit_sha}'
 
