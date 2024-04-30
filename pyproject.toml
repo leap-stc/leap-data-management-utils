@@ -29,6 +29,7 @@ dependencies = [
     "google-cloud-bigquery",
     "pandas",
     "pangeo-forge-esgf",
+    "pangeo-forge-recipes",
     "pydantic-core",
     "pydantic>=2",
     "pyyaml",
@@ -40,7 +41,12 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "pre-commit",
+    "pytest"
+]
+
+dev = [
+    "leap-data-leap_data_management_utils[test]",
+    "pre-commit"
 ]
 
 
