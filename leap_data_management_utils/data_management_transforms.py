@@ -14,26 +14,58 @@ from ruamel.yaml import YAML
 
 yaml = YAML(typ='safe')
 
+def get_github_actions_url() -> str:
+    """Return the url of the gh action run"""
+    if os.getenv('GITHUB_ACTIONS') == 'true':
+        print('Running from within GH actions')
+        server_url = os.getenv('GITHUB_SERVER_URL')
+        repository = os.getenv('GITHUB_REPOSITORY')
+        run_id = os.getenv('GITHUB_RUN_ID')
+        commit_hash = os.getenv('GITHUB_SHA')
+        
+        if server_url and repository and run_id and commit_hash:
+            return f"{server_url}/{repository}/actions/runs/{run_id}"
+        else:
+            print("One or more environment variables are missing.")
+            return "none"
 
-def get_github_commit_url() -> Optional[str]:
+def get_github_commit_url() -> str:
     """Get the GitHub commit URL for the current commit"""
     # Get GitHub Server URL
-    github_server_url = 'https://github.com'
+    
 
-    # Get the repository's remote origin URL
-    try:
-        repo_origin_url = subprocess.check_output(
-            ['git', 'config', '--get', 'remote.origin.url'], text=True
-        ).strip()
+    # check if this is running from within a github action
+    if os.getenv('GITHUB_ACTIONS') == 'true':
+        print('Running from within GH actions')
+        server_url = os.getenv('GITHUB_SERVER_URL')
+        repository = os.getenv('GITHUB_REPOSITORY')
+        run_id = os.getenv('GITHUB_RUN_ID')
+        commit_hash = os.getenv('GITHUB_SHA')
+        
+        if server_url and repository and run_id and commit_hash:
+            git_url_hash = f"{server_url}/{repository}/commit/{commit_hash}"
+        else:
+            print("Could not construct git_url_hash. One or more environment variables are missing.")
+            git_url_hash = "none"
 
-        # Extract the repository path from the remote URL
-        repository_path = repo_origin_url.split('github.com/')[-1].replace('.git', '')
-
-        # Get the current commit SHA
-        commit_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-
-        # Construct the GitHub commit URL
-        git_url_hash = f'{github_server_url}/{repository_path}/commit/{commit_sha}'
+    else:
+        #TODO: If the above fails, maybe still try this? Even though that would be a really rare case?
+        print('Fallback: Calling git via subprocess')
+        github_server_url = 'https://github.com'
+        # Get the repository's remote origin URL
+        try:
+            repo_origin_url = subprocess.check_output(
+                ['git', 'config', '--get', 'remote.origin.url'], text=True
+            ).strip()
+    
+            # Extract the repository path from the remote URL
+            repository_path = repo_origin_url.split('github.com/')[-1].replace('.git', '')
+    
+            # Get the current commit SHA
+            commit_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+    
+            # Construct the GitHub commit URL
+            git_url_hash = f'{github_server_url}/{repository_path}/commit/{commit_sha}'
 
         # Output the GitHub commit URL
         return git_url_hash
@@ -197,9 +229,11 @@ class InjectAttrs(beam.PTransform):
 
         if self.add_provenance:
             git_url_hash = get_github_commit_url()
+            gh_actions_url = get_github_actions_url()
             timestamp = datetime.now(timezone.utc).isoformat()
             provenance_dict = {
                 'pangeo_forge_build_git_hash': git_url_hash,
+                'pangeo_forge_gh_actions_url': gh_actions_url
                 'pangeo_forge_build_timestamp': timestamp,
             }
             self.inject_attrs.update(provenance_dict)
