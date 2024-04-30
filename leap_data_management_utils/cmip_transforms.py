@@ -10,7 +10,9 @@ import zarr
 from google.cloud import bigquery
 
 from leap_data_management_utils.data_management_transforms import BQInterface
+from leap_data_management_utils.cmip_testing import test_all
 
+from pangeo_forge_recipes.transforms import Indexed,T
 
 @dataclass
 class IIDEntry:
