@@ -71,13 +71,8 @@ def get_github_commit_url() -> str:
         except Exception as e:
             print(f"Getting git_url_hash failed with {e}")
             git_url_hash = "none"
-        # Output the GitHub commit URL
-        return git_url_hash
-
-    except subprocess.CalledProcessError as e:
-        print('Error executing Git command:', e)
-        return None
-
+    # Output the GitHub commit URL
+    return git_url_hash
 
 def get_catalog_store_urls(catalog_yaml_path: str) -> dict[str, str]:
     with open(catalog_yaml_path) as f:
