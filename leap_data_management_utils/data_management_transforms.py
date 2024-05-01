@@ -14,6 +14,7 @@ from ruamel.yaml import YAML
 
 yaml = YAML(typ='safe')
 
+
 def get_github_actions_url() -> str:
     """Return the url of the gh action run"""
     if os.getenv('GITHUB_ACTIONS') == 'true':
@@ -24,17 +25,17 @@ def get_github_actions_url() -> str:
         commit_hash = os.getenv('GITHUB_SHA')
 
         if server_url and repository and run_id and commit_hash:
-            return f"{server_url}/{repository}/actions/runs/{run_id}"
+            return f'{server_url}/{repository}/actions/runs/{run_id}'
         else:
-            print("One or more environment variables are missing.")
-            return "none"
+            print('One or more environment variables are missing.')
+            return 'none'
     else:
-        return "none"
+        return 'none'
+
 
 def get_github_commit_url() -> str:
     """Get the GitHub commit URL for the current commit"""
     # Get GitHub Server URL
-
 
     # check if this is running from within a github action
     if os.getenv('GITHUB_ACTIONS') == 'true':
@@ -45,13 +46,15 @@ def get_github_commit_url() -> str:
         commit_hash = os.getenv('GITHUB_SHA')
 
         if server_url and repository and run_id and commit_hash:
-            git_url_hash = f"{server_url}/{repository}/commit/{commit_hash}"
+            git_url_hash = f'{server_url}/{repository}/commit/{commit_hash}'
         else:
-            print("Could not construct git_url_hash. One or more environment variables are missing.")
-            git_url_hash = "none"
+            print(
+                'Could not construct git_url_hash. One or more environment variables are missing.'
+            )
+            git_url_hash = 'none'
 
     else:
-        #TODO: If the above fails, maybe still try this? Even though that would be a really rare case?
+        # TODO: If the above fails, maybe still try this? Even though that would be a really rare case?
         print('Fallback: Calling git via subprocess')
         github_server_url = 'https://github.com'
         # Get the repository's remote origin URL
@@ -69,10 +72,11 @@ def get_github_commit_url() -> str:
             # Construct the GitHub commit URL
             git_url_hash = f'{github_server_url}/{repository_path}/commit/{commit_sha}'
         except Exception as e:
-            print(f"Getting git_url_hash failed with {e}")
-            git_url_hash = "none"
+            print(f'Getting git_url_hash failed with {e}')
+            git_url_hash = 'none'
     # Output the GitHub commit URL
     return git_url_hash
+
 
 def get_catalog_store_urls(catalog_yaml_path: str) -> dict[str, str]:
     with open(catalog_yaml_path) as f:
