@@ -28,6 +28,8 @@ def get_github_actions_url() -> str:
         else:
             print("One or more environment variables are missing.")
             return "none"
+    else:
+        return "none"
 
 def get_github_commit_url() -> str:
     """Get the GitHub commit URL for the current commit"""
@@ -66,7 +68,9 @@ def get_github_commit_url() -> str:
 
             # Construct the GitHub commit URL
             git_url_hash = f'{github_server_url}/{repository_path}/commit/{commit_sha}'
-
+        except Exception as e:
+            print(f"Getting git_url_hash failed with {e}")
+            git_url_hash = "none"
         # Output the GitHub commit URL
         return git_url_hash
 
