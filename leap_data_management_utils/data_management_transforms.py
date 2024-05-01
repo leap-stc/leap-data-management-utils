@@ -232,7 +232,7 @@ class InjectAttrs(beam.PTransform):
             timestamp = datetime.now(timezone.utc).isoformat()
             provenance_dict = {
                 'pangeo_forge_build_git_hash': git_url_hash,
-                'pangeo_forge_gh_actions_url': gh_actions_url
+                'pangeo_forge_gh_actions_url': gh_actions_url,
                 'pangeo_forge_build_timestamp': timestamp,
             }
             self.inject_attrs.update(provenance_dict)
