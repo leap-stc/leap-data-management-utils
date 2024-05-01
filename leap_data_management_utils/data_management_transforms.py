@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import apache_beam as beam
+import os
 import zarr
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
