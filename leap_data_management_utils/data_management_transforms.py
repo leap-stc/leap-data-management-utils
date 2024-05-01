@@ -1,13 +1,13 @@
 # Note: All of this code was written by Julius Busecke and copied from this feedstock:
 # https://github.com/leap-stc/cmip6-leap-feedstock/blob/main/feedstock/recipe.py#L262
 
+import os
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
 
 import apache_beam as beam
-import os
 import zarr
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
