@@ -1,6 +1,7 @@
 import pandas as pd
 from pangeo_forge_esgf.utils import CMIP6_naming_schema
 
+
 def _maybe_prepend_dummy_dcpp(s: str):
     if '-' not in s:
         return 'none-' + s
