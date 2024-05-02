@@ -1,11 +1,5 @@
 import pandas as pd
-
-# TODO: This should live in pangeo-forge-esgf?
-# Need to test over there if the changes regarding member_id/varaint_label are correct
-# are breaking anything.
-# from pangeo_forge_esgf.utils import CMIP6_naming_schema_official
-CMIP6_naming_schema_official = 'mip_era.activity_id.institution_id.source_id.experiment_id.member_id.table_id.variable_id.grid_label.version'
-
+from pangeo_forge_esgf.utils import CMIP6_naming_schema
 
 def _maybe_prepend_dummy_dcpp(s: str):
     if '-' not in s:
@@ -26,7 +20,7 @@ def _maybe_join(iterable):
 
 def bq_df_to_intake_esm(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    iid_facets = CMIP6_naming_schema_official.split('.')
+    iid_facets = CMIP6_naming_schema.split('.')
     # some legit pandas magic here: https://stackoverflow.com/a/39358924
     df_out = df['instance_id'].str.split('.', expand=True)
     df_out = df_out.rename(columns={i: f for i, f in enumerate(iid_facets)})
