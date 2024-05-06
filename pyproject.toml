@@ -30,21 +30,34 @@ dependencies = [
 
 [project.optional-dependencies]
 
-pangeo-forge=[  "db_dtypes",
+pangeo-forge=[
+    "db_dtypes",
     "google-api-core",
     "google-cloud-bigquery",
     "pandas",
     "pangeo-forge-esgf",
-    "pangeo-forge-recipes", "apache-beam"]
-catalog = ["pydantic>=2","universal-pathlib", "pydantic-core"]
+    "pangeo-forge-recipes",
+    "apache-beam",
+    ]
+
+catalog = [
+    "pydantic>=2",
+    "universal-pathlib",
+    "pydantic-core",
+    ]
+
+
+
+complete = ["leap-data-leap_data_management_utils[pangeo-forge,catalog]"]
 test = [
-    "pytest"
+    "pytest",
+    "leap-data-leap_data_management_utils[complete]",
 ]
+
 dev = [
     "leap-data-leap_data_management_utils[test]",
-    "pre-commit"
+    "pre-commit",
 ]
-complete = ["leap-data-leap_data_management_utils[pangeo-forge,catalog]"]
 
 [project.scripts]
 leap-catalog = "leap_data_management_utils.catalog:main"
