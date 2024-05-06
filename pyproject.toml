@@ -51,7 +51,7 @@ catalog = [
 complete = ["leap-data-leap_data_management_utils[pangeo-forge,catalog]"]
 test = [
     "pytest",
-    "leap-data-leap_data_management_utils[complete]",
+    "leap-data-leap_data_management_utils[pangeo-forge,catalog]",
 ]
 
 dev = [
