@@ -22,33 +22,42 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "apache-beam",
     "cftime",
+    "ruamel.yaml",
+    "xarray",
+    "zarr",
+]
+
+[project.optional-dependencies]
+
+pangeo-forge=[
     "db_dtypes",
     "google-api-core",
     "google-cloud-bigquery",
     "pandas",
     "pangeo-forge-esgf",
     "pangeo-forge-recipes",
-    "pydantic-core",
-    "pydantic>=2",
-    "pyyaml",
-    "ruamel.yaml",
-    "universal-pathlib",
-    "xarray",
-    "zarr",
-]
+    "apache-beam",
+    ]
 
-[project.optional-dependencies]
+catalog = [
+    "pydantic>=2",
+    "universal-pathlib",
+    "pydantic-core",
+    ]
+
+
+
+complete = ["leap-data-management-utils[pangeo-forge,catalog]"]
 test = [
-    "pytest"
+    "pytest",
+    "leap-data-management-utils[complete]",
 ]
 
 dev = [
-    "leap-data-leap_data_management_utils[test]",
-    "pre-commit"
+    "leap-data-management-utils[test]",
+    "pre-commit",
 ]
-
 
 [project.scripts]
 leap-catalog = "leap_data_management_utils.catalog:main"
