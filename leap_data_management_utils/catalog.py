@@ -6,7 +6,9 @@ import pydantic
 import pydantic_core
 import requests
 import upath
-import yaml
+from ruamel.yaml import YAML
+
+yaml = YAML(typ='safe')
 
 
 def s3_to_https(s3_url: str) -> str:
@@ -80,10 +82,10 @@ class Feedstock(pydantic.BaseModel):
 
     @classmethod
     def from_yaml(cls, path: str):
-        content = yaml.safe_load(upath.UPath(path).read_text())
+        content = yaml.load(upath.UPath(path).read_text())
         if 'ncviewjs:meta_yaml_url' in content:
             meta_url = convert_to_raw_github_url(content['ncviewjs:meta_yaml_url'])
-            meta = yaml.safe_load(upath.UPath(meta_url).read_text())
+            meta = yaml.load(upath.UPath(meta_url).read_text())
             content = content | meta
         data = cls.model_validate(content)
         return data
@@ -113,7 +115,7 @@ def collect_feedstocks(path: upath.UPath) -> list[upath.UPath]:
     """Collects all the datasets in the given directory."""
 
     url = convert_to_raw_github_url(path)
-    if not (feedstocks := yaml.safe_load(upath.UPath(url).read_text())['feedstocks']):
+    if not (feedstocks := yaml.load(upath.UPath(url).read_text())['feedstocks']):
         raise FileNotFoundError(f'No YAML files (.yaml or .yml) found in {path}')
     return feedstocks
 
