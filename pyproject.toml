@@ -40,7 +40,7 @@ pangeo-forge=[
     "pangeo-forge-recipes",
     "apache-beam",
     "dynamic-chunks",
-    "xarray",
+    "dask"
     ]
 
 catalog = [
