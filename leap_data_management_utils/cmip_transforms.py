@@ -25,7 +25,7 @@ from leap_data_management_utils.data_management_transforms import BQInterface
 
 
 ## Dynamic Chunking Wrapper
-def dynamic_chunking_func(ds: xr.Dataset) -> Dict[str, int]:
+def dynamic_chunking_func(ds: xr.Dataset) -> dict[str, int]:
     logger.info(f'Input Dataset for dynamic chunking {ds =}')
 
     target_chunk_size = '150MB'
