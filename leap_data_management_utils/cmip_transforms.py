@@ -6,10 +6,10 @@ import datetime
 import warnings
 from dataclasses import dataclass
 
-from dask.utils import parse_bytes
 import apache_beam as beam
 import xarray as xr
 import zarr
+from dask.utils import parse_bytes
 from dynamic_chunks.algorithms import (
     NoMatchingChunks,
     even_divisor_algo,
