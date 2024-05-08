@@ -1,6 +1,6 @@
+import numpy as np
 import pytest
 import xarray as xr
-import numpy as np
 
 from leap_data_management_utils.cmip_transforms import IIDEntry, dynamic_chunk_func
 
@@ -25,10 +25,12 @@ class TestIIDEntry:
         with pytest.raises(ValueError):
             IIDEntry(iid, store, retracted, tests_passed)
 
+
 class TestDynamicChunks:
     def test_too_small(self):
-        ds = xr.DataArray(np.random.rand(4,4)).to_dataset(name='data')
+        ds = xr.DataArray(np.random.rand(4, 4)).to_dataset(name='data')
         chunks = dynamic_chunk_func(ds)
-        assert chunks=={'x':4, 'y':4}
-        
+        assert chunks == {'x': 4, 'y': 4}
+
+
 # TODO Its super hard to test anything involving big query, because AFAIK there is no way to mock it.
