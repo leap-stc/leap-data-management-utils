@@ -3,6 +3,7 @@ utils that are specific to CMIP data management
 """
 
 import datetime
+import logging
 import warnings
 from dataclasses import dataclass
 
@@ -24,7 +25,7 @@ from leap_data_management_utils.data_management_transforms import BQInterface
 
 # TODO: I am not sure the chunking function belongs here, but it clutters the recipe and I did not want
 # To open a whole file for this.
-
+logger = logging.getLogger(__name__)
 
 ## Dynamic Chunking Wrapper
 def dynamic_chunking_func(ds: xr.Dataset) -> dict[str, int]:
