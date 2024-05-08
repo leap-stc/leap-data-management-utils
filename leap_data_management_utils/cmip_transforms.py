@@ -1,46 +1,47 @@
 """
 utils that are specific to CMIP data management
 """
-import warnings
+
 import datetime
+import warnings
 from dataclasses import dataclass
 
 import apache_beam as beam
 import zarr
+from dynamic_chunks.algorithms import (
+    NoMatchingChunks,
+    even_divisor_algo,
+    iterative_ratio_increase_algo,
+)
 from google.cloud import bigquery
 from pangeo_forge_recipes.transforms import Indexed, T
 
 from leap_data_management_utils.cmip_testing import test_all
 from leap_data_management_utils.data_management_transforms import BQInterface
 
-from dynamic_chunks.algorithms import (
-    even_divisor_algo,
-    iterative_ratio_increase_algo,
-    NoMatchingChunks,
-)
-
-#TODO: I am not sure the chunking function belongs here, but it clutters the recipe and I did not want
+# TODO: I am not sure the chunking function belongs here, but it clutters the recipe and I did not want
 # To open a whole file for this.
+
 
 ## Dynamic Chunking Wrapper
 def dynamic_chunking_func(ds: xr.Dataset) -> Dict[str, int]:
-    logger.info(f"Input Dataset for dynamic chunking {ds =}")
+    logger.info(f'Input Dataset for dynamic chunking {ds =}')
 
-    target_chunk_size = "150MB"
+    target_chunk_size = '150MB'
     target_chunks_aspect_ratio = {
-        "time": 10,
-        "x": 1,
-        "i": 1,
-        "ni": 1,
-        "xh": 1,
-        "nlon": 1,
-        "lon": 1,  # TODO: Maybe import all the known spatial dimensions from xmip?
-        "y": 1,
-        "j": 1,
-        "nj": 1,
-        "yh": 1,
-        "nlat": 1,
-        "lat": 1,
+        'time': 10,
+        'x': 1,
+        'i': 1,
+        'ni': 1,
+        'xh': 1,
+        'nlon': 1,
+        'lon': 1,  # TODO: Maybe import all the known spatial dimensions from xmip?
+        'y': 1,
+        'j': 1,
+        'nj': 1,
+        'yh': 1,
+        'nlat': 1,
+        'lat': 1,
     }
     size_tolerance = 0.5
 
@@ -60,9 +61,9 @@ def dynamic_chunking_func(ds: xr.Dataset) -> Dict[str, int]:
 
         except NoMatchingChunks:
             warnings.warn(
-                "Primary algorithm using even divisors along each dimension failed "
-                "with. Trying secondary algorithm."
-                f"Input {ds=}"
+                'Primary algorithm using even divisors along each dimension failed '
+                'with. Trying secondary algorithm.'
+                f'Input {ds=}'
             )
             try:
                 target_chunks = iterative_ratio_increase_algo(
@@ -74,19 +75,18 @@ def dynamic_chunking_func(ds: xr.Dataset) -> Dict[str, int]:
                 )
             except NoMatchingChunks:
                 raise ValueError(
-                    (
-                        "Could not find any chunk combinations satisfying "
-                        "the size constraint with either algorithm."
-                        f"Input {ds=}"
-                    )
+                    'Could not find any chunk combinations satisfying '
+                    'the size constraint with either algorithm.'
+                    f'Input {ds=}'
                 )
             # If something fails
             except Exception as e:
                 raise e
         except Exception as e:
             raise e
-    logger.info(f"Dynamic Chunking determined {target_chunks =}")
+    logger.info(f'Dynamic Chunking determined {target_chunks =}')
     return target_chunks
+
 
 @dataclass
 class IIDEntry:
