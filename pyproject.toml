@@ -38,7 +38,8 @@ pangeo-forge=[
     "pangeo-forge-esgf",
     "pangeo-forge-recipes",
     "apache-beam",
-    "dynamic-chunks"
+    "dynamic-chunks",
+    "xarray",
     ]
 
 catalog = [
@@ -52,7 +53,6 @@ catalog = [
 complete = ["leap-data-management-utils[pangeo-forge,catalog]"]
 test = [
     "pytest",
-    "xarray",
     "leap-data-management-utils[complete]",
 ]
 
