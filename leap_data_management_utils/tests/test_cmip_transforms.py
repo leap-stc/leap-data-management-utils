@@ -28,9 +28,9 @@ class TestIIDEntry:
 
 class TestDynamicChunks:
     def test_too_small(self):
-        ds = xr.DataArray(np.random.rand(4, 4)).to_dataset(name='data')
+        ds = xr.DataArray(np.random.rand(4, 6)).to_dataset(name='data')
         chunks = dynamic_chunking_func(ds)
-        assert chunks == {'x': 4, 'y': 4}
+        assert chunks == {'dim_0': 4, 'dim_1': 6}
 
 
 # TODO Its super hard to test anything involving big query, because AFAIK there is no way to mock it.
