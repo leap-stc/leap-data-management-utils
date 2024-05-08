@@ -12,7 +12,7 @@ from pangeo_forge_recipes.transforms import Indexed, T
 
 from leap_data_management_utils.cmip_testing import test_all
 from leap_data_management_utils.data_management_transforms import BQInterface
-
+from tqdm.auto import tqdm
 
 @dataclass
 class IIDEntry:
@@ -140,16 +140,6 @@ class CMIPBQInterface(BQInterface):
         """More efficient way to check if a list of iids exists in the table
         Passes the entire list to a single SQL query.
         Returns a list of iids that exist in the table
-        Only supports list up to 10k elements. If you want to check more, you should
-        work in batches:
-        ```
-        iids = df['instance_id'].tolist()
-        iids_in_bq = []
-        batchsize = 10000
-        iid_batches = [iids[i : i + batchsize] for i in range(0, len(iids), batchsize)]
-        for iids_batch in tqdm(iid_batches):
-            iids_in_bq_batch = bq.iid_list_exists(iids_batch)
-            iids_in_bq.extend(iids_in_bq_batch)
         ```
         """
         if len(iids) > 10000:
@@ -167,26 +157,15 @@ class CMIPBQInterface(BQInterface):
 
     def iid_list_exists(self, iids: list[str]) -> list[str]:
         """More efficient way to check if a list of iids exists in the table
-        Passes the entire list to a single SQL query.
+        Passes the entire list in batches into SQL querys for maximum efficiency.
         Returns a list of iids that exist in the table
-        Only supports list up to 10k elements. If you want to check more, you should
-        work in batches:
-        ```
-        iids = df['instance_id'].tolist()
-        iids_in_bq = []
-        batchsize = 10000
-        iid_batches = [iids[i : i + batchsize] for i in range(0, len(iids), batchsize)]
-        for iids_batch in tqdm(iid_batches):
-            iids_in_bq_batch = bq.iid_list_exists(iids_batch)
-            iids_in_bq.extend(iids_in_bq_batch)
-        ```
         """
 
         # make batches of the input, since bq cannot handle more than 10k elements here
         iids_in_bq = []
         batchsize = 10000
         iid_batches = [iids[i : i + batchsize] for i in range(0, len(iids), batchsize)]
-        for iids_batch in iid_batches:
+        for iids_batch in tqdm(iid_batches):
             iids_in_bq_batch = self._iid_list_exists_batch(iids_batch)
             iids_in_bq.extend(iids_in_bq_batch)
         return iids_in_bq
