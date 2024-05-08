@@ -5,7 +5,7 @@ utils that are specific to CMIP data management
 import datetime
 import warnings
 from dataclasses import dataclass
-
+import xarray as xr
 import apache_beam as beam
 import zarr
 from dynamic_chunks.algorithms import (
