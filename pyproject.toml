@@ -38,6 +38,7 @@ pangeo-forge=[
     "pangeo-forge-esgf",
     "pangeo-forge-recipes",
     "apache-beam",
+    "dynamic-chunks"
     ]
 
 catalog = [
