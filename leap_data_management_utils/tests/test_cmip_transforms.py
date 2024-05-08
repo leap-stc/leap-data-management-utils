@@ -29,7 +29,7 @@ class TestIIDEntry:
 class TestDynamicChunks:
     def test_too_small(self):
         ds = xr.DataArray(np.random.rand(4, 4)).to_dataset(name='data')
-        chunks = dynamic_chunk_func(ds)
+        chunks = dynamic_chunking_func(ds)
         assert chunks == {'x': 4, 'y': 4}
 
 
