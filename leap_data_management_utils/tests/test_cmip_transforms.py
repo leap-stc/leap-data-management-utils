@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from leap_data_management_utils.cmip_transforms import IIDEntry
+from leap_data_management_utils.cmip_transforms import IIDEntry, dynamic_chunking_func
 
 
 class TestIIDEntry:
