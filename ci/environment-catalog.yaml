@@ -1,0 +1,19 @@
+name: leap-data-management
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10
+  - aiohttp
+  - cf_xarray
+  - cftime
+  - dask
+  - fsspec >= 2023.2
+  - gcsfs
+  - pip
+  - pydantic-core
+  - pydantic>=2
+  - pyyaml
+  - s3fs
+  - universal_pathlib
+  - zarr
