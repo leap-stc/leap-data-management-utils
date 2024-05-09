@@ -45,6 +45,8 @@ pangeo-forge=[
 catalog = [
     "pydantic>=2",
     "universal-pathlib",
+    "requests",
+    "aiohttp",
     "pydantic-core",
     "cf_xarray",
     ]
