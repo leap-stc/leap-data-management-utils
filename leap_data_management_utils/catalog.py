@@ -1,11 +1,14 @@
 import argparse
 import json
+import re
 import traceback
 
+import cf_xarray  # noqa: F401
 import pydantic
 import pydantic_core
 import requests
 import upath
+import xarray as xr
 from ruamel.yaml import YAML
 
 yaml = YAML(typ='safe')
@@ -35,6 +38,7 @@ class Store(pydantic.BaseModel):
     url: str = pydantic.Field(..., description='URL of the store')
     rechunking: list[dict[str, str]] | None = pydantic.Field(None, alias='ncviewjs:rechunking')
     public: bool | None = pydantic.Field(None, description='Whether the store is public')
+    geospatial: bool | None = pydantic.Field(None, description='Whether the store is geospatial')
 
 
 class Link(pydantic.BaseModel):
@@ -132,6 +136,57 @@ def format_report(title: str, feedstocks: list[dict], include_traceback: bool = 
     return report
 
 
+def get_http_url(store: str) -> str:
+    if store.startswith('s3://'):
+        url = s3_to_https(store)
+
+    elif store.startswith('gs://'):
+        url = gs_to_https(store)
+    else:
+        url = store
+
+    url = url.strip('/')
+    return url
+
+
+def is_store_public(store) -> bool:
+    try:
+        url = get_http_url(store)
+        path = f'{url}/.zmetadata'
+
+        response = requests.get(path)
+        response.raise_for_status()
+        return True
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            print(f'Resource not found at {path}.')
+        else:
+            print(f'HTTP error {e.response.status_code} for {path}.')
+        return False
+    except Exception as e:
+        print(f'An error occurred while checking if store {store} is public: {str(e)}')
+        return False
+
+
+def is_geospatial(store) -> bool:
+    url = get_http_url(store)
+    ds = xr.open_dataset(url, engine='zarr', chunks={})
+    cf_axes = ds.cf.axes
+
+    # Regex patterns that match 'lat', 'latitude', 'lon', 'longitude' and also allow prefixes
+    lat_pattern = re.compile(r'.*(lat|latitude)$', re.IGNORECASE)
+    lon_pattern = re.compile(r'.*(lon|longitude)$', re.IGNORECASE)
+
+    # Gather all coordinate and dimension names
+    all_names = set(ds.coords.keys()).union(set(ds.dims))
+
+    # Identify if both latitude and longitude coordinates/dimensions are present
+    has_latitude = any(lat_pattern.match(name) for name in all_names)
+    has_longitude = any(lon_pattern.match(name) for name in all_names)
+
+    return ('X' in cf_axes and 'Y' in cf_axes) or (has_latitude and has_longitude)
+
+
 def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
     errors = []
     valid = []
@@ -143,7 +198,13 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
             print('🔄 Checking stores')
             for index, store in enumerate(feed.stores):
                 print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
-                feed.stores[index].public = is_store_public(store.rechunking or store.url)
+                is_public = is_store_public(store.rechunking or store.url)
+                feed.stores[index].public = is_public
+                if is_public:
+                    # check if the store is geospatial
+                    # print('🌍 Checking geospatial')
+                    is_geospatial_store = is_geospatial(store.rechunking or store.url)
+                    feed.stores[index].geospatial = is_geospatial_store
             valid.append({'feedstock': str(feedstock), 'status': 'valid'})
             catalog.append(feed)
         except Exception:
@@ -160,34 +221,6 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
         raise ValidationError('Validation failed')
 
     return catalog
-
-
-def is_store_public(store) -> bool:
-    try:
-        if store.startswith('s3://'):
-            url = s3_to_https(store)
-
-        elif store.startswith('gs://'):
-            url = gs_to_https(store)
-        else:
-            url = store
-
-        url = url.strip('/')
-
-        path = f'{url}/.zmetadata'
-
-        response = requests.get(path)
-        response.raise_for_status()
-        return True
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            print(f'Resource not found at {path}.')
-        else:
-            print(f'HTTP error {e.response.status_code} for {path}.')
-        return False
-    except Exception as e:
-        print(f'An error occurred while checking if store {store} is public: {str(e)}')
-        return False
 
 
 def validate(args):

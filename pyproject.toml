@@ -47,6 +47,7 @@ catalog = [
     "pydantic>=2",
     "universal-pathlib",
     "pydantic-core",
+    "cf_xarray",
     ]
 
 
