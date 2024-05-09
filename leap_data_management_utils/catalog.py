@@ -136,18 +136,22 @@ def format_report(title: str, feedstocks: list[dict], include_traceback: bool = 
     return report
 
 
+def get_http_url(store: str) -> str:
+    if store.startswith('s3://'):
+        url = s3_to_https(store)
+
+    elif store.startswith('gs://'):
+        url = gs_to_https(store)
+    else:
+        url = store
+
+    url = url.strip('/')
+    return url
+
+
 def is_store_public(store) -> bool:
     try:
-        if store.startswith('s3://'):
-            url = s3_to_https(store)
-
-        elif store.startswith('gs://'):
-            url = gs_to_https(store)
-        else:
-            url = store
-
-        url = url.strip('/')
-
+        url = get_http_url(store)
         path = f'{url}/.zmetadata'
 
         response = requests.get(path)
@@ -165,7 +169,8 @@ def is_store_public(store) -> bool:
 
 
 def is_geospatial(store) -> bool:
-    ds = xr.open_dataset(store, engine='zarr', chunks={})
+    url = get_http_url(store)
+    ds = xr.open_dataset(url, engine='zarr', chunks={})
     cf_axes = ds.cf.axes
 
     # Regex patterns that match 'lat', 'latitude', 'lon', 'longitude' and also allow prefixes
