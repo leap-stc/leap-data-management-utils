@@ -7,12 +7,15 @@ dependencies:
   - aiohttp
   - apache-beam
   - black
+  - cf_xarray
   - cftime
-  - google-cloud-bigquery
+  - dask
   - fsspec >= 2023.2
   - gcsfs
   - google-api-core
+  - google-cloud-bigquery
   - pangeo-forge-recipes
+  - pip
   - pre-commit
   - pydantic-core
   - pydantic>=2
@@ -23,5 +26,6 @@ dependencies:
   - universal_pathlib
   - zarr
   - pip:
+      - dynamic-chunks
       - db_dtypes
       - pangeo-forge-esgf
