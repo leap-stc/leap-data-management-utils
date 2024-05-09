@@ -22,6 +22,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+    "dask",
     "cftime",
     "ruamel.yaml",
     "xarray",
@@ -35,18 +36,19 @@ pangeo-forge=[
     "db_dtypes",
     "google-api-core",
     "google-cloud-bigquery",
-    "pandas",
     "pangeo-forge-esgf",
     "pangeo-forge-recipes",
     "apache-beam",
     "dynamic-chunks",
-    "dask"
+
     ]
 catalog = [
-    "pydantic>=2",
-    "universal-pathlib",
-    "pydantic-core",
+    "aiohttp",
     "cf_xarray",
+    "pydantic-core",
+    "pydantic>=2",
+    "requests",
+    "universal-pathlib",
     ]
 complete = ["leap-data-management-utils[pangeo-forge,catalog]"]
 test = [
