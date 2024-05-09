@@ -42,22 +42,17 @@ pangeo-forge=[
     "dynamic-chunks",
     "dask"
     ]
-
 catalog = [
     "pydantic>=2",
     "universal-pathlib",
     "pydantic-core",
     "cf_xarray",
     ]
-
-
-
 complete = ["leap-data-management-utils[pangeo-forge,catalog]"]
 test = [
     "pytest",
     "leap-data-management-utils[complete]",
 ]
-
 dev = [
     "leap-data-management-utils[test]",
     "pre-commit",
