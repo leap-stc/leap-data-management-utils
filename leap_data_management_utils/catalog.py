@@ -170,7 +170,7 @@ def is_store_public(store) -> bool:
 
 def is_geospatial(store) -> bool:
     url = get_http_url(store)
-    ds = xr.open_dataset(url, engine='zarr', chunks={})
+    ds = xr.open_dataset(url, engine='zarr', chunks={}, decode_cf=False)
     cf_axes = ds.cf.axes
 
     # Regex patterns that match 'lat', 'latitude', 'lon', 'longitude' and also allow prefixes
@@ -195,16 +195,19 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
     for feedstock in feedstocks:
         try:
             feed = Feedstock.from_yaml(convert_to_raw_github_url(feedstock))
-            print('🔄 Checking stores')
-            for index, store in enumerate(feed.stores):
-                print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
-                is_public = is_store_public(store.rechunking or store.url)
-                feed.stores[index].public = is_public
-                if is_public:
-                    # check if the store is geospatial
-                    # print('🌍 Checking geospatial')
-                    is_geospatial_store = is_geospatial(store.rechunking or store.url)
-                    feed.stores[index].geospatial = is_geospatial_store
+            if feed.stores:
+                print('🔄 Checking stores')
+                for index, store in enumerate(feed.stores):
+                    print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
+                    is_public = is_store_public(store.rechunking or store.url)
+                    feed.stores[index].public = is_public
+                    if is_public:
+                        # check if the store is geospatial
+                        # print('🌍 Checking geospatial')
+                        is_geospatial_store = is_geospatial(store.rechunking or store.url)
+                        feed.stores[index].geospatial = is_geospatial_store
+            else:
+                print('🚀 No stores found.')
             valid.append({'feedstock': str(feedstock), 'status': 'valid'})
             catalog.append(feed)
         except Exception:
