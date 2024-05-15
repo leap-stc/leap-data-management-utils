@@ -170,7 +170,7 @@ def is_store_public(store) -> bool:
 
 def is_geospatial(store) -> bool:
     url = get_http_url(store)
-    ds = xr.open_dataset(url, engine='zarr', chunks={})
+    ds = xr.open_dataset(url, engine='zarr', chunks={}, decode_cf=False)
     cf_axes = ds.cf.axes
 
     # Regex patterns that match 'lat', 'latitude', 'lon', 'longitude' and also allow prefixes
