@@ -177,7 +177,7 @@ To add a new dataset to the LEAP web catalog, follow these steps:
 
 > [!NOTE]
 > please see [this template](https://github.com/leap-stc/LEAP_template_feedstock) repository for an example
-   
+
 2. **Add Dataset URL**: Add the URL of your dataset's `catalog.yaml` file to this [file](https://github.com/leap-stc/data-management/blob/main/catalog/input.yaml).
 3. **Create a Pull Request**: Follow the standard GitHub workflow to create a pull request.
 
