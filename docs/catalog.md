@@ -10,24 +10,57 @@ The catalog is generated from individual YAML files. Each dataset, or feedstock,
 
 The `meta.yaml` schema is borrowed from the [Pangeo-Forge](https://pangeo-forge.org/) project. The following fields are required:
 
-| Field         | Type             | Description                                  | Object Properties                                                                                                                                                 |
-| ------------- | ---------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`       | String           | The title of the feedstock.                  |                                                                                                                                                                   |
-| `description` | String           | A brief description of the feedstock.        |                                                                                                                                                                   |
-| `maintainers` | Array of Objects | Information about the dataset's maintainers. | `name`: Name of the maintainer (Type: String)<br>`github`: GitHub username of the maintainer (Type: String)                                                       |
-| `provenance`  | Object           | Information about the dataset's provenance.  | `providers`: List of providers (Type: Array of Objects)<br>`license`: License information (Type: String)<br>`license_link`: License link (Type: Object, optional) |
+| Field         | Type             | Description                                  |
+| ------------- | ---------------- | -------------------------------------------- |
+| `title`       | String           | The title of the feedstock.                  |
+| `description` | String           | A brief description of the feedstock.        |
+| `maintainers` | Array of Objects | Information about the dataset's maintainers. |
+| `provenance`  | Object           | Information about the dataset's provenance.  |
+
+#### Object Properties for `maintainers`
+
+| Property | Type   | Description                       |
+| -------- | ------ | --------------------------------- |
+| `name`   | String | Name of the maintainer            |
+| `github` | String | GitHub username of the maintainer |
+
+#### Object Properties for `provenance`
+
+| Property       | Type              | Description         |
+| -------------- | ----------------- | ------------------- |
+| `providers`    | Array of Objects  | List of providers   |
+| `license`      | String            | License information |
+| `license_link` | Object (optional) | License link        |
 
 ### catalog.yaml Schema
 
 The `catalog.yaml` file contains additional information about the dataset. The following fields are required:
 
-| Field           | Type             | Description                                      | Object Properties                                                                                                                                                                                                                                                                                                                                             |
-| --------------- | ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meta_yaml_url` | String           | URL to the meta YAML file.                       |                                                                                                                                                                                                                                                                                                                                                               |
-| `thumbnail`     | String           | Thumbnail of the feedstock.                      |                                                                                                                                                                                                                                                                                                                                                               |
-| `tags`          | Array of Strings | Tags associated with the feedstock.              |                                                                                                                                                                                                                                                                                                                                                               |
-| `links`         | Array of Objects | Additional links related to the feedstock.       | `label`: Label of the link (Type: String)<br>`url`: URL of the link (Type: String)                                                                                                                                                                                                                                                                            |
-| `stores`        | Array of Objects | Information about where the feedstock is stored. | `id`: ID of the store (Type: String)<br>`name`: Name of the store (Type: String, optional)<br>`url`: URL of the store (Type: String)<br>`rechunking`: Rechunking information (Type: Array of Objects, optional)<br>`public`: Whether the store is public (Type: Boolean, optional)<br>`geospatial`: Whether the store is geospatial (Type: Boolean, optional) |
+| Field           | Type             | Description                                      |
+| --------------- | ---------------- | ------------------------------------------------ |
+| `meta_yaml_url` | String           | URL to the meta YAML file.                       |
+| `thumbnail`     | String           | Thumbnail of the feedstock.                      |
+| `tags`          | Array of Strings | Tags associated with the feedstock.              |
+| `links`         | Array of Objects | Additional links related to the feedstock.       |
+| `stores`        | Array of Objects | Information about where the feedstock is stored. |
+
+#### Object Properties for `links`
+
+| Property | Type   | Description       |
+| -------- | ------ | ----------------- |
+| `label`  | String | Label of the link |
+| `url`    | String | URL of the link   |
+
+#### Object Properties for `stores`
+
+| Property     | Type                        | Description                     |
+| ------------ | --------------------------- | ------------------------------- |
+| `id`         | String                      | ID of the store                 |
+| `name`       | String (optional)           | Name of the store               |
+| `url`        | String                      | URL of the store                |
+| `rechunking` | Array of Objects (optional) | Rechunking information          |
+| `public`     | Boolean (optional)          | Whether the store is public     |
+| `geospatial` | Boolean (optional)          | Whether the store is geospatial |
 
 ### Example YAML Files
 
@@ -38,11 +71,6 @@ Here's an example of a `meta.yaml` file:
 title: "LEAP Data Library Prototype"
 description: >
   A prototype test for the LEAP Data Library refactor
-recipes:
-  - id: "small"
-    object: "recipe:small"
-  - id: "large"
-    object: "recipe:large"
 provenance:
   providers:
     - name: "Julius"
@@ -106,12 +134,49 @@ Output:
   📂 https://github.com/leap-stc/proto_feedstock/blob/main/feedstock/catalog.yaml
 ```
 
+### Validation via GitHub Actions
+
+Validation of catalog files can also be performed via GitHub Actions using the following workflow:
+
+```yaml
+# contents of .github/workflows/validate-catalog.yaml
+name: Catalog
+
+on:
+  pull_request:
+    branches:
+  push:
+    branches:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: validate feedstock entry
+        uses: leap-stc/data-catalog-actions/leap-catalog@main
+        with:
+          single-feedstock: "./feedstock/catalog.yaml"
+```
+
 ### How to Add a New Dataset to the LEAP Web Catalog
 
 To add a new dataset to the LEAP web catalog, follow these steps:
 
 1. **Create YAML Files**: Create `meta.yaml` and `catalog.yaml` files for your dataset as shown in the examples above. These can reside in a GitHub repository or any other location accessible via a URL.
+   > [!NOTE]
+   > please see [this template](https://github.com/leap-stc/LEAP_template_feedstock) repository for an example
 2. **Add Dataset URL**: Add the URL of your dataset's `catalog.yaml` file to this [file](https://github.com/leap-stc/data-management/blob/main/catalog/input.yaml).
 3. **Create a Pull Request**: Follow the standard GitHub workflow to create a pull request.
 
-Once your pull request is merged, your dataset will be added to the consolidated JSON catalog, which is then rendered at [LEAP Data Catalog](https://leap-data-catalog.vercel.app/).
+Once your pull request is merged, your dataset will be added to the consolidated JSON catalog, which is then rendered at [LEAP Data Catalog](https://catalog.leap.carbonplan.org/).
