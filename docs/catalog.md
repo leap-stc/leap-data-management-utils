@@ -1,6 +1,6 @@
 # What is the LEAP Data Catalog?
 
-The LEAP Data Catalog is a centralized repository that consolidates various LEAP datasets into a single JSON file. This JSON catalog is generated from individual YAML files, each representing a dataset. The catalog is currently in development, and a draft version is available at [LEAP Data Catalog](https://leap-data-catalog.vercel.app/).
+The LEAP Data Catalog is a centralized repository that consolidates various LEAP datasets into a single JSON file. This JSON catalog is generated from individual YAML files, each representing a dataset. The catalog is currently in development, and a draft version is available at [LEAP Data Catalog](https://catalog.leap.carbonplan.org/).
 
 ## The Schema
 
@@ -166,7 +166,7 @@ jobs:
       - name: validate feedstock entry
         uses: leap-stc/data-catalog-actions/leap-catalog@main
         with:
-          single-feedstock: "./feedstock/catalog.yaml"
+          single-feedstock: "./feedstock/catalog.yaml" # path to the catalog.yaml file
 ```
 
 ### How to Add a New Dataset to the LEAP Web Catalog
