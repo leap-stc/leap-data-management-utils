@@ -31,16 +31,18 @@ dependencies = [
 
 [project.optional-dependencies]
 
-pangeo-forge=[
+bigquery=[
     "tqdm",
-    "db_dtypes",
     "google-api-core",
     "google-cloud-bigquery",
+    "db_dtypes",
+]
+pangeo-forge=[
+    "leap-data-management-utils[bigquery]"
     "pangeo-forge-esgf",
     "pangeo-forge-recipes",
     "apache-beam",
     "dynamic-chunks",
-
     ]
 catalog = [
     "aiohttp",
