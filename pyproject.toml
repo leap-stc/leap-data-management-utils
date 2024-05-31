@@ -38,11 +38,11 @@ bigquery=[
     "db_dtypes",
 ]
 pangeo-forge=[
-    "leap-data-management-utils[bigquery]"
     "pangeo-forge-esgf",
     "pangeo-forge-recipes",
     "apache-beam",
     "dynamic-chunks",
+    "leap-data-management-utils[bigquery]",
     ]
 catalog = [
     "aiohttp",
