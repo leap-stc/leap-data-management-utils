@@ -5,13 +5,12 @@ import os
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
 
 import apache_beam as beam
 import zarr
-from google.api_core.exceptions import NotFound
-from google.cloud import bigquery
 from ruamel.yaml import YAML
+
+from leap_data_management_utils.bq_interfaces import BQInterface
 
 yaml = YAML(typ='safe')
 
@@ -83,94 +82,6 @@ def get_catalog_store_urls(catalog_yaml_path: str) -> dict[str, str]:
     with open(catalog_yaml_path) as f:
         catalog_meta = yaml.load(f)
     return {d['id']: d['url'] for d in catalog_meta['stores']}
-
-
-@dataclass
-class BQInterface:
-    """Class to read/write information from BigQuery table
-    :param table_id: BigQuery table ID
-    :param client: BigQuery client object
-    :param result_limit: Maximum number of results to return from query
-    """
-
-    table_id: str
-    client: Optional[bigquery.client.Client] = None
-    result_limit: Optional[int] = 10
-    schema: Optional[list] = None
-
-    def __post_init__(self):
-        # TODO how do I handle the schema? This class could be used for any table, but for
-        # TODO this specific case I want to prescribe the schema
-        # for now just hardcode it
-        if not self.schema:
-            self.schema = [
-                bigquery.SchemaField('dataset_id', 'STRING', mode='REQUIRED'),
-                bigquery.SchemaField('dataset_url', 'STRING', mode='REQUIRED'),
-                bigquery.SchemaField('timestamp', 'TIMESTAMP', mode='REQUIRED'),
-            ]
-        if self.client is None:
-            self.client = bigquery.Client()
-
-        # check if table exists, otherwise create it
-        try:
-            self._get_table()
-        except NotFound:
-            self.create_table()
-
-    def create_table(self) -> bigquery.table.Table:
-        """Create the table if it does not exist"""
-        print(f'Creating {self.table_id =}')
-        table = bigquery.Table(self.table_id, schema=self.schema)
-        self.client.create_table(table)  # Make an API request.
-
-    def _get_table(self) -> bigquery.table.Table:
-        """Get the table object"""
-        return self.client.get_table(self.table_id)
-
-    def insert(self, fields: dict = {}):
-        timestamp = datetime.now().isoformat()
-
-        rows_to_insert = [
-            fields | {'timestamp': timestamp}  # timestamp is always overridden
-        ]
-
-        errors = self.client.insert_rows_json(self._get_table(), rows_to_insert)
-        if errors:
-            raise RuntimeError(f'Error inserting row: {errors}')
-
-    def catalog_insert(self, dataset_id: str, dataset_url: str, extra_fields: dict = {}):
-        rows_to_insert = [
-            {
-                'dataset_id': dataset_id,
-                'dataset_url': dataset_url,
-            }
-            | extra_fields
-        ]
-        self.insert(rows_to_insert)
-
-    def _get_query_job(self, query: str) -> bigquery.job.query.QueryJob:
-        return self.client.query(query)
-
-    def get_all(self) -> list[bigquery.table.Row]:
-        """Get all rows in the table"""
-        query = f"""
-        SELECT * FROM {self.table_id};
-        """
-        results = self._get_query_job(query)
-        return results.to_dataframe()
-
-    def get_latest(self) -> list[bigquery.table.Row]:
-        """Get the latest row for all iids in the table"""
-        # adopted from https://stackoverflow.com/a/1313293
-        query = f"""
-        WITH ranked_iids AS (
-        SELECT i.*, ROW_NUMBER() OVER (PARTITION BY instance_id ORDER BY timestamp DESC) AS rn
-        FROM {self.table_id} AS i
-        )
-        SELECT * FROM ranked_iids WHERE rn = 1;
-        """
-        results = self._get_query_job(query)
-        return results.to_dataframe().drop(columns=['rn'])
 
 
 # ----------------------------------------------------------------------------------------------
