@@ -36,9 +36,9 @@ bigquery=[
     "google-api-core",
     "google-cloud-bigquery",
     "db_dtypes",
+    "pangeo-forge-esgf",
 ]
 pangeo-forge=[
-    "pangeo-forge-esgf",
     "pangeo-forge-recipes",
     "apache-beam",
     "dynamic-chunks",
