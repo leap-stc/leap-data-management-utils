@@ -61,7 +61,7 @@ def test_attributes(ds: xr.Dataset, iid: str, verbose):
 
     # check completeness of attributes
     iid_schema = CMIP6_naming_schema
-    # The cmip datasets do not all have 'member_id' as an attribute. 
+    # The cmip datasets do not all have 'member_id' as an attribute.
     # Member id is composed of two (I think) required attributes as:
     # <sub_experiment_id>-<variant_label>
     # See https://docs.google.com/document/d/1h0r8RZr_f3-8egBMMh7aqLwy3snpD6_MrDz1q8n5XUk/edit for more info
