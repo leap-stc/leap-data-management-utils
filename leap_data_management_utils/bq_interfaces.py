@@ -4,8 +4,8 @@ from typing import Optional
 
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
-from tqdm.auto import tqdm
 from pangeo_forge_esgf.utils import CMIP6_naming_schema
+from tqdm.auto import tqdm
 
 
 @dataclass
