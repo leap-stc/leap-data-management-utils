@@ -61,6 +61,11 @@ def test_attributes(ds: xr.Dataset, iid: str, verbose):
 
     # check completeness of attributes
     iid_schema = CMIP6_naming_schema
+    # The cmip datasets do not all have 'member_id' as an attribute. 
+    # Member id is composed of two (I think) required attributes as:
+    # <sub_experiment_id>-<variant_label>
+    # See https://docs.google.com/document/d/1h0r8RZr_f3-8egBMMh7aqLwy3snpD6_MrDz1q8n5XUk/edit for more info
+    iid_schema = iid_schema.replace('.member_id.', '.variant_label.sub_experiment_id.')
     for facet_value, facet in zip(iid.split('.'), iid_schema.split('.')):
         if 'version' not in facet:  # (TODO: Why is the version not in all datasets?)
             if verbose:
