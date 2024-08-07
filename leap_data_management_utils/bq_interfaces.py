@@ -4,6 +4,7 @@ from typing import Optional
 
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
+from pangeo_forge_esgf.utils import CMIP6_naming_schema
 from tqdm.auto import tqdm
 
 
@@ -109,7 +110,7 @@ class IIDEntry:
 
     # Check if the iid conforms to a schema
     def __post_init__(self):
-        schema = 'mip_era.activity_id.institution_id.source_id.experiment_id.member_id.table_id.variable_id.grid_label.version'
+        schema = CMIP6_naming_schema
         facets = self.iid.split('.')
         if len(facets) != len(schema.split('.')):
             raise ValueError(f'IID does not conform to CMIP6 {schema =}. Got {self.iid =}')
