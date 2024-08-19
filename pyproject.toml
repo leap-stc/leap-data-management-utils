@@ -27,6 +27,7 @@ dependencies = [
     "ruamel.yaml",
     "xarray",
     "zarr",
+    "setuptools",
 ]
 
 [project.optional-dependencies]
