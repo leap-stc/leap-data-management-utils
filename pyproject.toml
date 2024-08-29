@@ -1,6 +1,7 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm[toml]>=6.2", "wheel"]
+requires = ["setuptools", "setuptools-scm[toml", "wheel"]
 build-backend = "setuptools.build_meta"
+
 
 [project]
 name = "leap-data-management-utils"
