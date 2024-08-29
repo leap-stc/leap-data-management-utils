@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm[toml]", "wheel"]
+requires = ["setuptools>=45", "setuptools-scm[toml]>=6.2", "wheel", "pip>=22"]
 build-backend = "setuptools.build_meta"
 
 
@@ -41,7 +41,7 @@ bigquery=[
 ]
 pangeo-forge=[
     "pangeo-forge-recipes",
-    "apache-beam==2.58.0",
+    "apache-beam==2.42.0",
     "dynamic-chunks",
     "leap-data-management-utils[bigquery]",
     ]
