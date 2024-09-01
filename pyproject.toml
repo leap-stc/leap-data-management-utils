@@ -41,7 +41,7 @@ bigquery=[
 ]
 pangeo-forge=[
     "pangeo-forge-recipes",
-    "apache-beam==2.58.0",
+    "apache-beam==2.58.1",
     "dynamic-chunks",
     "leap-data-management-utils[bigquery]",
     ]
