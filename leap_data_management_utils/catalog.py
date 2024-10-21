@@ -2,6 +2,7 @@ import argparse
 import json
 import re
 import traceback
+import typing
 
 import cf_xarray  # noqa: F401
 import pydantic
@@ -32,6 +33,10 @@ def gs_to_https(gs_url: str) -> str:
     return gs_url.replace('gs://', 'https://storage.googleapis.com/')
 
 
+class XarrayOpenKwargs(pydantic.BaseModel):
+    engine: typing.Literal['zarr', 'kerchunk']
+
+
 class Store(pydantic.BaseModel):
     id: str = pydantic.Field(..., description='ID of the store')
     name: str = pydantic.Field(None, description='Name of the store')
@@ -39,6 +44,10 @@ class Store(pydantic.BaseModel):
     rechunking: list[dict[str, str]] | None = pydantic.Field(None, alias='ncviewjs:rechunking')
     public: bool | None = pydantic.Field(None, description='Whether the store is public')
     geospatial: bool | None = pydantic.Field(None, description='Whether the store is geospatial')
+    xarray_open_kwargs: XarrayOpenKwargs | None = pydantic.Field(
+        None, description='Xarray open kwargs for the store'
+    )
+    last_updated: str | None = pydantic.Field(None, description='Last updated timestamp')
 
 
 class Link(pydantic.BaseModel):
@@ -82,13 +91,15 @@ class Feedstock(pydantic.BaseModel):
     tags: list[str] | None = pydantic.Field(None, description='Tags of the dataset')
     links: list[Link] | None = None
     stores: list[Store] | None = None
-    meta_yaml_url: pydantic.HttpUrl | None = pydantic.Field(None, alias='ncviewjs:meta_yaml_url')
+    meta_yaml_url: pydantic.HttpUrl | None = pydantic.Field(
+        None, description='URL of the meta YAML'
+    )
 
     @classmethod
     def from_yaml(cls, path: str):
         content = yaml.load(upath.UPath(path).read_text())
-        if 'ncviewjs:meta_yaml_url' in content:
-            meta_url = convert_to_raw_github_url(content['ncviewjs:meta_yaml_url'])
+        if 'meta_yaml_url' in content:
+            meta_url = convert_to_raw_github_url(content['meta_yaml_url'])
             meta = yaml.load(upath.UPath(meta_url).read_text())
             content = content | meta
         data = cls.model_validate(content)
@@ -168,9 +179,12 @@ def is_store_public(store) -> bool:
         return False
 
 
-def is_geospatial(store) -> bool:
+def load_store(store: str, engine: str) -> xr.Dataset:
     url = get_http_url(store)
-    ds = xr.open_dataset(url, engine='zarr', chunks={}, decode_cf=False)
+    return xr.open_dataset(url, engine=engine, chunks={}, decode_cf=False)
+
+
+def is_geospatial(ds: xr.Dataset) -> bool:
     cf_axes = ds.cf.axes
 
     # Regex patterns that match 'lat', 'latitude', 'lon', 'longitude' and also allow prefixes
@@ -204,7 +218,10 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
                     if is_public:
                         # check if the store is geospatial
                         # print('🌍 Checking geospatial')
-                        is_geospatial_store = is_geospatial(store.rechunking or store.url)
+                        ds = load_store(
+                            store.rechunking or store.url, store.xarray_open_kwargs.engine
+                        )
+                        is_geospatial_store = is_geospatial(ds)
                         feed.stores[index].geospatial = is_geospatial_store
             else:
                 print('🚀 No stores found.')
