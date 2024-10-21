@@ -53,14 +53,16 @@ The `catalog.yaml` file contains additional information about the dataset. The f
 
 #### Object Properties for `stores`
 
-| Property     | Type                        | Description                     |
-| ------------ | --------------------------- | ------------------------------- |
-| `id`         | String                      | ID of the store                 |
-| `name`       | String (optional)           | Name of the store               |
-| `url`        | String                      | URL of the store                |
-| `rechunking` | Array of Objects (optional) | Rechunking information          |
-| `public`     | Boolean (optional)          | Whether the store is public     |
-| `geospatial` | Boolean (optional)          | Whether the store is geospatial |
+| Property             | Type                        | Description                     |
+| -------------------- | --------------------------- | ------------------------------- |
+| `id`                 | String                      | ID of the store                 |
+| `name`               | String (optional)           | Name of the store               |
+| `url`                | String                      | URL of the store                |
+| `rechunking`         | Array of Objects (optional) | Rechunking information          |
+| `public`             | Boolean (optional)          | Whether the store is public     |
+| `geospatial`         | Boolean (optional)          | Whether the store is geospatial |
+| `xarray_open_kwargs` | Object (optional)           | Additional xarray open kwargs   |
+| `last_updated`       | String (optional)           | Last updated timestamp          |
 
 ### Example YAML Files
 
