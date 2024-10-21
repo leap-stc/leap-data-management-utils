@@ -3,6 +3,11 @@ name: Catalog
 on:
   pull_request:
     branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -34,11 +39,5 @@ jobs:
         run: |
           leap-catalog --help
           leap-catalog validate --single https://github.com/leap-stc/proto_feedstock/blob/main/feedstock/catalog.yaml
-          leap-catalog generate --path https://raw.githubusercontent.com/leap-stc/data-management/staging/catalog/input.yaml --output catalog/
+          leap-catalog generate --single https://github.com/carbonplan/ocean-carbon-sink-data-feedstock/blob/main/feedstock/catalog.yaml --output catalog/
           cat catalog/output/consolidated-web-catalog.json | jq
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: consolidated-web-catalog.json
-          path: catalog/output/consolidated-web-catalog.json
