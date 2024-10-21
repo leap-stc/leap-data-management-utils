@@ -208,6 +208,27 @@ def is_geospatial(ds: xr.Dataset) -> bool:
     return ('X' in cf_axes and 'Y' in cf_axes) or (has_latitude and has_longitude)
 
 
+def check_stores(feed: Feedstock) -> None:
+    for index, store in enumerate(feed.stores):
+        print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
+        check_single_store(store)
+
+
+def check_single_store(store: Store) -> None:
+    is_public = is_store_public(store.rechunking or store.url)
+    store.public = is_public
+    if is_public:
+        # check if the store is geospatial
+        ds = load_store(
+            store.rechunking or store.url,
+            store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
+        )
+        is_geospatial_store = is_geospatial(ds)
+        store.geospatial = is_geospatial_store
+        # get last_updated_timestamp
+        store.last_updated = ds.attrs.get('pangeo_forge_build_timestamp', None)
+
+
 def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
     errors = []
     valid = []
@@ -218,23 +239,8 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
             feed = Feedstock.from_yaml(convert_to_raw_github_url(feedstock))
             if feed.stores:
                 print('🔄 Checking stores')
-                for index, store in enumerate(feed.stores):
-                    print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
-                    is_public = is_store_public(store.rechunking or store.url)
-                    feed.stores[index].public = is_public
-                    if is_public:
-                        # check if the store is geospatial
-                        # print('🌍 Checking geospatial')
-                        ds = load_store(
-                            store.rechunking or store.url,
-                            store.xarray_open_kwargs.engine,
-                        )
-                        is_geospatial_store = is_geospatial(ds)
-                        feed.stores[index].geospatial = is_geospatial_store
-                        # get last_updated_timestamp: https://github.com/leap-stc/LEAP_template_feedstock/blob/e66e1396746353f7fa63f52503af71f737cca047/feedstock/recipe.py#L95C6-L95C34
-                        feed.stores[index].last_updated = ds.attrs.get(
-                            'pangeo_forge_build_timestamp', None
-                        )
+                check_stores(feed)
+
             else:
                 print('🚀 No stores found.')
             valid.append({'feedstock': str(feedstock), 'status': 'valid'})
