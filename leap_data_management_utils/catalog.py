@@ -133,7 +133,7 @@ class ValidationError(Exception):
         super().__init__(self.errors)
 
 
-def collect_feedstocks(path: upath.UPath) -> list[upath.UPath]:
+def collect_feedstocks(path: upath.UPath) -> list[str]:
     """Collects all the datasets in the given directory."""
 
     url = convert_to_raw_github_url(path)
@@ -229,7 +229,7 @@ def check_single_store(store: Store) -> None:
         store.last_updated = ds.attrs.get('pangeo_forge_build_timestamp', None)
 
 
-def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
+def validate_feedstocks(*, feedstocks: list[str]) -> list[Feedstock]:
     errors = []
     valid = []
     catalog = []
@@ -286,7 +286,7 @@ def validate(args):
 
 
 def generate(args):
-    feedstocks = collect_feedstocks(args.path)
+    feedstocks = [args.single] if args.single else collect_feedstocks(args.path)
     catalog = validate_feedstocks(feedstocks=feedstocks)
     output = upath.UPath(args.output).resolve() / 'output'
     output.mkdir(parents=True, exist_ok=True)
@@ -310,9 +310,11 @@ def main():
 
     # Subparser for the "generate" command
     parser_generate = subparsers.add_parser('generate', help='Generate the catalog')
-    parser_generate.add_argument(
-        '--path', type=str, required=True, help='Path to the feedstocks input YAML file'
+    group = parser_generate.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        '--path', type=str, help='Path to the feedstocks input YAML file or directory'
     )
+    group.add_argument('--single', type=str, help='Path to a single feedstock YAML file')
     parser_generate.add_argument(
         '--output', type=str, required=True, help='Path to the output directory'
     )
