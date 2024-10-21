@@ -37,6 +37,9 @@ class XarrayOpenKwargs(pydantic.BaseModel):
     engine: typing.Literal['zarr', 'kerchunk']
 
 
+default_xarray_open_kwargs = XarrayOpenKwargs(engine='zarr')
+
+
 class Store(pydantic.BaseModel):
     id: str = pydantic.Field(..., description='ID of the store')
     name: str = pydantic.Field(None, description='Name of the store')
@@ -45,7 +48,7 @@ class Store(pydantic.BaseModel):
     public: bool | None = pydantic.Field(None, description='Whether the store is public')
     geospatial: bool | None = pydantic.Field(None, description='Whether the store is geospatial')
     xarray_open_kwargs: XarrayOpenKwargs | None = pydantic.Field(
-        None, description='Xarray open kwargs for the store'
+        default_xarray_open_kwargs, description='Xarray open kwargs for the store'
     )
     last_updated: str | None = pydantic.Field(None, description='Last updated timestamp')
 
@@ -92,18 +95,22 @@ class Feedstock(pydantic.BaseModel):
     links: list[Link] | None = None
     stores: list[Store] | None = None
     meta_yaml_url: pydantic.HttpUrl | None = pydantic.Field(
-        None, description='URL of the meta YAML'
+        None, alias='ncviewjs:meta_yaml_url', description='URL of the meta YAML'
     )
 
     @classmethod
     def from_yaml(cls, path: str):
         content = yaml.load(upath.UPath(path).read_text())
-        if 'meta_yaml_url' in content:
-            meta_url = convert_to_raw_github_url(content['meta_yaml_url'])
+
+        meta_url_key = next(
+            (key for key in ['meta_yaml_url', 'ncviewjs:meta_yaml_url'] if key in content), None
+        )
+
+        if meta_url_key:
+            meta_url = convert_to_raw_github_url(content[meta_url_key])
             meta = yaml.load(upath.UPath(meta_url).read_text())
             content = content | meta
-        data = cls.model_validate(content)
-        return data
+        return cls.model_validate(content)
 
 
 def convert_to_raw_github_url(github_url):
@@ -219,10 +226,15 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
                         # check if the store is geospatial
                         # print('🌍 Checking geospatial')
                         ds = load_store(
-                            store.rechunking or store.url, store.xarray_open_kwargs.engine
+                            store.rechunking or store.url,
+                            store.xarray_open_kwargs.engine,
                         )
                         is_geospatial_store = is_geospatial(ds)
                         feed.stores[index].geospatial = is_geospatial_store
+                        # get last_updated_timestamp: https://github.com/leap-stc/LEAP_template_feedstock/blob/e66e1396746353f7fa63f52503af71f737cca047/feedstock/recipe.py#L95C6-L95C34
+                        feed.stores[index].last_updated = ds.attrs.get(
+                            'pangeo_forge_build_timestamp', None
+                        )
             else:
                 print('🚀 No stores found.')
             valid.append({'feedstock': str(feedstock), 'status': 'valid'})
