@@ -219,11 +219,13 @@ class CopyRclone(beam.PTransform):
             logger.warning(f'Copying from {source} to {self.target}')
 
             copy_proc = subprocess.run(
-                f'rclone copy --fast-list --max-backlog 500000 --s3-chunk-size 200M --s3-upload-concurrency 128 --transfers 128 --checkers 128  -vv -P source:"{source}/" target:"{self.target}/"',
+                f'rclone -vv copy --fast-list --max-backlog 500000 --s3-chunk-size 200M --s3-upload-concurrency 128 --transfers 128 --checkers 128  -vv -P source:"{source}/" target:"{self.target}/"',
                 shell=True,
-                capture_output=False,  # will expose secrets if true
+                capture_output=True,
                 text=True,
             )
+            logger.warning(copy_proc.stdout)
+            logger.warning(copy_proc.stderr)
             copy_proc.check_returncode()
             del copy_proc
             return zarr.storage.FSStore(self.target)
