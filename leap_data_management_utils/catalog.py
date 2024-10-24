@@ -2,6 +2,7 @@ import argparse
 import json
 import re
 import traceback
+import typing
 
 import cf_xarray  # noqa: F401
 import pydantic
@@ -32,6 +33,13 @@ def gs_to_https(gs_url: str) -> str:
     return gs_url.replace('gs://', 'https://storage.googleapis.com/')
 
 
+class XarrayOpenKwargs(pydantic.BaseModel):
+    engine: typing.Literal['zarr', 'kerchunk']
+
+
+default_xarray_open_kwargs = XarrayOpenKwargs(engine='zarr')
+
+
 class Store(pydantic.BaseModel):
     id: str = pydantic.Field(..., description='ID of the store')
     name: str = pydantic.Field(None, description='Name of the store')
@@ -39,6 +47,10 @@ class Store(pydantic.BaseModel):
     rechunking: list[dict[str, str]] | None = pydantic.Field(None, alias='ncviewjs:rechunking')
     public: bool | None = pydantic.Field(None, description='Whether the store is public')
     geospatial: bool | None = pydantic.Field(None, description='Whether the store is geospatial')
+    xarray_open_kwargs: XarrayOpenKwargs | None = pydantic.Field(
+        default_xarray_open_kwargs, description='Xarray open kwargs for the store'
+    )
+    last_updated: str | None = pydantic.Field(None, description='Last updated timestamp')
 
 
 class Link(pydantic.BaseModel):
@@ -82,17 +94,23 @@ class Feedstock(pydantic.BaseModel):
     tags: list[str] | None = pydantic.Field(None, description='Tags of the dataset')
     links: list[Link] | None = None
     stores: list[Store] | None = None
-    meta_yaml_url: pydantic.HttpUrl | None = pydantic.Field(None, alias='ncviewjs:meta_yaml_url')
+    meta_yaml_url: pydantic.HttpUrl | None = pydantic.Field(
+        None, alias='ncviewjs:meta_yaml_url', description='URL of the meta YAML'
+    )
 
     @classmethod
     def from_yaml(cls, path: str):
         content = yaml.load(upath.UPath(path).read_text())
-        if 'ncviewjs:meta_yaml_url' in content:
-            meta_url = convert_to_raw_github_url(content['ncviewjs:meta_yaml_url'])
+
+        meta_url_key = next(
+            (key for key in ['meta_yaml_url', 'ncviewjs:meta_yaml_url'] if key in content), None
+        )
+
+        if meta_url_key:
+            meta_url = convert_to_raw_github_url(content[meta_url_key])
             meta = yaml.load(upath.UPath(meta_url).read_text())
             content = content | meta
-        data = cls.model_validate(content)
-        return data
+        return cls.model_validate(content)
 
 
 def convert_to_raw_github_url(github_url):
@@ -115,7 +133,7 @@ class ValidationError(Exception):
         super().__init__(self.errors)
 
 
-def collect_feedstocks(path: upath.UPath) -> list[upath.UPath]:
+def collect_feedstocks(path: upath.UPath) -> list[str]:
     """Collects all the datasets in the given directory."""
 
     url = convert_to_raw_github_url(path)
@@ -168,9 +186,12 @@ def is_store_public(store) -> bool:
         return False
 
 
-def is_geospatial(store) -> bool:
+def load_store(store: str, engine: str) -> xr.Dataset:
     url = get_http_url(store)
-    ds = xr.open_dataset(url, engine='zarr', chunks={}, decode_cf=False)
+    return xr.open_dataset(url, engine=engine, chunks={}, decode_cf=False)
+
+
+def is_geospatial(ds: xr.Dataset) -> bool:
     cf_axes = ds.cf.axes
 
     # Regex patterns that match 'lat', 'latitude', 'lon', 'longitude' and also allow prefixes
@@ -187,7 +208,28 @@ def is_geospatial(store) -> bool:
     return ('X' in cf_axes and 'Y' in cf_axes) or (has_latitude and has_longitude)
 
 
-def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
+def check_stores(feed: Feedstock) -> None:
+    for index, store in enumerate(feed.stores):
+        print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
+        check_single_store(store)
+
+
+def check_single_store(store: Store) -> None:
+    is_public = is_store_public(store.rechunking or store.url)
+    store.public = is_public
+    if is_public:
+        # check if the store is geospatial
+        ds = load_store(
+            store.rechunking or store.url,
+            store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
+        )
+        is_geospatial_store = is_geospatial(ds)
+        store.geospatial = is_geospatial_store
+        # get last_updated_timestamp
+        store.last_updated = ds.attrs.get('pangeo_forge_build_timestamp', None)
+
+
+def validate_feedstocks(*, feedstocks: list[str]) -> list[Feedstock]:
     errors = []
     valid = []
     catalog = []
@@ -197,15 +239,8 @@ def validate_feedstocks(*, feedstocks: list[upath.UPath]) -> list[Feedstock]:
             feed = Feedstock.from_yaml(convert_to_raw_github_url(feedstock))
             if feed.stores:
                 print('🔄 Checking stores')
-                for index, store in enumerate(feed.stores):
-                    print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
-                    is_public = is_store_public(store.rechunking or store.url)
-                    feed.stores[index].public = is_public
-                    if is_public:
-                        # check if the store is geospatial
-                        # print('🌍 Checking geospatial')
-                        is_geospatial_store = is_geospatial(store.rechunking or store.url)
-                        feed.stores[index].geospatial = is_geospatial_store
+                check_stores(feed)
+
             else:
                 print('🚀 No stores found.')
             valid.append({'feedstock': str(feedstock), 'status': 'valid'})
@@ -251,7 +286,7 @@ def validate(args):
 
 
 def generate(args):
-    feedstocks = collect_feedstocks(args.path)
+    feedstocks = [args.single] if args.single else collect_feedstocks(args.path)
     catalog = validate_feedstocks(feedstocks=feedstocks)
     output = upath.UPath(args.output).resolve() / 'output'
     output.mkdir(parents=True, exist_ok=True)
@@ -275,9 +310,11 @@ def main():
 
     # Subparser for the "generate" command
     parser_generate = subparsers.add_parser('generate', help='Generate the catalog')
-    parser_generate.add_argument(
-        '--path', type=str, required=True, help='Path to the feedstocks input YAML file'
+    group = parser_generate.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        '--path', type=str, help='Path to the feedstocks input YAML file or directory'
     )
+    group.add_argument('--single', type=str, help='Path to a single feedstock YAML file')
     parser_generate.add_argument(
         '--output', type=str, required=True, help='Path to the output directory'
     )

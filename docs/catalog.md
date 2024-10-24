@@ -1,6 +1,6 @@
 # What is the LEAP Data Catalog?
 
-The LEAP Data Catalog is a centralized repository that consolidates various LEAP datasets into a single JSON file. This JSON catalog is generated from individual YAML files, each representing a dataset. The catalog is currently in development, and a draft version is available at [LEAP Data Catalog](https://catalog.leap.carbonplan.org/).
+The LEAP Data Catalog is a centralized repository that consolidates various LEAP datasets into a single JSON file. This JSON catalog is generated from individual YAML files, each representing a dataset. The catalog is currently in development, and a draft version is available at [LEAP Data Catalog](https://catalog.leap.columbia.edu/).
 
 ## The Schema
 
@@ -53,14 +53,16 @@ The `catalog.yaml` file contains additional information about the dataset. The f
 
 #### Object Properties for `stores`
 
-| Property     | Type                        | Description                     |
-| ------------ | --------------------------- | ------------------------------- |
-| `id`         | String                      | ID of the store                 |
-| `name`       | String (optional)           | Name of the store               |
-| `url`        | String                      | URL of the store                |
-| `rechunking` | Array of Objects (optional) | Rechunking information          |
-| `public`     | Boolean (optional)          | Whether the store is public     |
-| `geospatial` | Boolean (optional)          | Whether the store is geospatial |
+| Property             | Type                        | Description                     |
+| -------------------- | --------------------------- | ------------------------------- |
+| `id`                 | String                      | ID of the store                 |
+| `name`               | String (optional)           | Name of the store               |
+| `url`                | String                      | URL of the store                |
+| `rechunking`         | Array of Objects (optional) | Rechunking information          |
+| `public`             | Boolean (optional)          | Whether the store is public     |
+| `geospatial`         | Boolean (optional)          | Whether the store is geospatial |
+| `xarray_open_kwargs` | Object (optional)           | Additional xarray open kwargs   |
+| `last_updated`       | String (optional)           | Last updated timestamp          |
 
 ### Example YAML Files
 
@@ -181,4 +183,4 @@ To add a new dataset to the LEAP web catalog, follow these steps:
 2. **Add Dataset URL**: Add the URL of your dataset's `catalog.yaml` file to this [file](https://github.com/leap-stc/data-management/blob/main/catalog/input.yaml).
 3. **Create a Pull Request**: Follow the standard GitHub workflow to create a pull request.
 
-Once your pull request is merged, your dataset will be added to the consolidated JSON catalog, which is then rendered at [LEAP Data Catalog](https://catalog.leap.carbonplan.org/).
+Once your pull request is merged, your dataset will be added to the consolidated JSON catalog, which is then rendered at [LEAP Data Catalog](https://catalog.leap.columbia.edu/).
