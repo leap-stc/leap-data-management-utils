@@ -40,18 +40,26 @@ def test_time(ds: xr.Dataset, verbose):
     - That time increases strictly monotonically
     - That no large gaps in time (e.g. missing file) are present
     """
-    if verbose:
-        print('Testing - Time Dimension')
-    time_diff = ds.time.diff('time').astype(int)
-    # assert that time increases monotonically
-    if verbose:
-        print(time_diff)
-    assert (time_diff > 0).all()
+    if 'time' not in ds.dims:
+        if verbose:
+            print('No time dimension found')
+    else:
+        if verbose:
+            print('Testing - Time Dimension')
 
-    # assert that there are no large time gaps
-    mean_time_diff = time_diff.mean()
-    normalized_time_diff = abs((time_diff - mean_time_diff) / mean_time_diff)
-    assert (normalized_time_diff < 0.05).all()
+        # check that the time range is the same as
+        # indicated in the ESGF API dataset response
+
+        time_diff = ds.time.diff('time').astype(int)
+        # assert that time increases monotonically
+        if verbose:
+            print(time_diff)
+        assert (time_diff > 0).all()
+
+        # assert that there are no large time gaps
+        mean_time_diff = time_diff.mean()
+        normalized_time_diff = abs((time_diff - mean_time_diff) / mean_time_diff)
+        assert (normalized_time_diff < 0.05).all()
 
 
 def test_attributes(ds: xr.Dataset, iid: str, verbose):
@@ -66,9 +74,16 @@ def test_attributes(ds: xr.Dataset, iid: str, verbose):
                 print(f'Checking {facet = } in dataset attributes')
             assert ds.attrs[facet] == facet_value
 
+    # check that the esgf api response is stored in the dataset attributes
+    assert 'pangeo_forge_api_responses' in ds.attrs
+    assert len(ds.attrs['pangeo_forge_api_responses']['dataset']) == 1
+    assert len(ds.attrs['pangeo_forge_api_responses']['files']) >= 1
+
 
 def test_all(store: zarr.storage.FSStore, iid: str, verbose=True) -> zarr.storage.FSStore:
     ds = test_open_store(store, verbose=verbose)
-    test_time(ds, verbose=verbose)
+    # attributes need to be tested before because
+    # time tests depend on newly added attributes
     test_attributes(ds, iid, verbose=verbose)
+    test_time(ds, verbose=verbose)
     return store
