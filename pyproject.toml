@@ -37,6 +37,7 @@ pangeo-forge = [
     "pangeo-forge-recipes",
     "apache-beam==2.58.0",
     "dynamic-chunks",
+    "google-cloud-secret-manager",
     "leap-data-management-utils[bigquery]",
 ]
 catalog = [

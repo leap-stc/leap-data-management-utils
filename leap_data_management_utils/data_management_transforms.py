@@ -1,6 +1,7 @@
 # Note: All of this code was written by Julius Busecke and copied from this feedstock:
 # https://github.com/leap-stc/cmip6-leap-feedstock/blob/main/feedstock/recipe.py#L262
 
+import logging
 import os
 import subprocess
 from dataclasses import dataclass
@@ -11,6 +12,8 @@ import zarr
 from ruamel.yaml import YAML
 
 from leap_data_management_utils.bq_interfaces import BQInterface
+
+logger = logging.getLogger(__name__)
 
 yaml = YAML(typ='safe')
 
@@ -164,3 +167,68 @@ class InjectAttrs(beam.PTransform):
         self, pcoll: beam.PCollection[zarr.storage.FSStore]
     ) -> beam.PCollection[zarr.storage.FSStore]:
         return pcoll | 'Injecting Attributes' >> beam.Map(self._update_zarr_attrs)
+
+
+@dataclass
+class CopyRclone(beam.PTransform):
+    """Copy a store to a new location using rclone. If the target input is False, do nothing.
+    Currently assumes that the source is a GCS bucket (with auth in the environment)
+    and the target is an OSN bucket.
+    The OSN credentials are fetched from GCP Secret Manager. This could be implemented more generally
+    for arbirary rclone remotes as sources and targets.
+    """
+
+    target: str
+
+    def _copy(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
+        import os
+
+        import zarr
+
+        # We do need the gs:// prefix?
+        # TODO: Determine this dynamically from zarr.storage.FSStore
+        source = os.path.normpath(store.path)
+        if self.target is False:
+            # dont do anything
+            return store
+        else:
+            from google.cloud import secretmanager
+
+            secret_client = secretmanager.SecretManagerServiceClient()
+
+            # define rclone remotes ("source" and "target") in the environment
+
+            os.environ['RCLONE_CONFIG_SOURCE_TYPE'] = 'gcs'
+            os.environ['RCLONE_CONFIG_SOURCE_ENV_AUTH'] = 'true'
+
+            os.environ['RCLONE_CONFIG_TARGET_TYPE'] = 's3'
+            os.environ['RCLONE_CONFIG_TARGET_PROVIDER'] = 'Ceph'
+            os.environ['RCLONE_CONFIG_TARGET_ENDPOINT'] = 'https://nyu1.osn.mghpcc.org'
+            os.environ['RCLONE_CONFIG_TARGET_ACCESS_KEY_ID'] = secret_client.access_secret_version(
+                name='projects/leap-pangeo/secrets/OSN_CATALOG_BUCKET_KEY/versions/latest'
+            ).payload.data.decode('UTF-8')
+            os.environ['RCLONE_CONFIG_TARGET_SECRET_ACCESS_KEY'] = (
+                secret_client.access_secret_version(
+                    name='projects/leap-pangeo/secrets/OSN_CATALOG_BUCKET_KEY_SECRET/versions/latest'
+                ).payload.data.decode('UTF-8')
+            )
+
+            # beam does not like clients to stick around
+            del secret_client
+
+            logger.warning(f'Copying from {source} to {self.target}')
+
+            copy_proc = subprocess.run(
+                f'rclone -vv copy --fast-list --max-backlog 500000 --s3-chunk-size 200M --s3-upload-concurrency 128 --transfers 128 --checkers 128  -vv -P source:"{source}/" target:"{self.target}/"',
+                shell=True,
+                capture_output=True,
+                text=True,
+            )
+            logger.warning(copy_proc.stdout)
+            logger.warning(copy_proc.stderr)
+            copy_proc.check_returncode()
+            del copy_proc
+            return zarr.storage.FSStore(self.target)
+
+    def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
+        return pcoll | 'Copying Store' >> beam.Map(self._copy)
