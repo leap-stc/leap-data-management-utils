@@ -290,9 +290,14 @@ def generate(args):
     catalog = validate_feedstocks(feedstocks=feedstocks)
     output = upath.UPath(args.output).resolve() / 'output'
     output.mkdir(parents=True, exist_ok=True)
-    with open(f'{output}/consolidated-web-catalog.json', 'w') as f:
+    path = (
+        output / 'single-feedstock-web-catalog.json'
+        if args.single
+        else output / 'consolidated-web-catalog.json'
+    )
+    with open(path, 'w') as f:
         json.dump(catalog, f, indent=2, default=pydantic_core.to_jsonable_python)
-        print(f'Catalog written to {output}/consolidated-web-catalog.json')
+        print(f'Catalog written to {path}')
 
 
 def main():
