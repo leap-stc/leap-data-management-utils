@@ -205,11 +205,11 @@ class CopyRclone(beam.PTransform):
             os.environ['RCLONE_CONFIG_TARGET_PROVIDER'] = 'Ceph'
             os.environ['RCLONE_CONFIG_TARGET_ENDPOINT'] = 'https://nyu1.osn.mghpcc.org'
             os.environ['RCLONE_CONFIG_TARGET_ACCESS_KEY_ID'] = secret_client.access_secret_version(
-                name='projects/leap-pangeo/secrets/OSN_CATALOG_BUCKET_KEY/versions/latest'
+                name='projects/leap-pangeo/secrets/OSN_LEAP_PANGEO_PIPELINE_KEY /versions/latest'
             ).payload.data.decode('UTF-8')
             os.environ['RCLONE_CONFIG_TARGET_SECRET_ACCESS_KEY'] = (
                 secret_client.access_secret_version(
-                    name='projects/leap-pangeo/secrets/OSN_CATALOG_BUCKET_KEY_SECRET/versions/latest'
+                    name='projects/leap-pangeo/secrets/OSN_LEAP_PANGEO_PIPELINE_SECRET/versions/latest'
                 ).payload.data.decode('UTF-8')
             )
 
