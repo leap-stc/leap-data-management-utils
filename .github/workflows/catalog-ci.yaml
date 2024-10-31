@@ -39,5 +39,5 @@ jobs:
         run: |
           leap-catalog --help
           leap-catalog validate --single https://github.com/leap-stc/proto_feedstock/blob/main/feedstock/catalog.yaml
-          leap-catalog generate --single https://github.com/carbonplan/ocean-carbon-sink-data-feedstock/blob/main/feedstock/catalog.yaml --output catalog/
-          cat catalog/output/consolidated-web-catalog.json | jq
+          leap-catalog generate --single https://github.com/carbonplan/ocean-carbon-sink-data-feedstock/blob/main/feedstock/catalog.yaml --output ./
+          cat ./output/single-feedstock-web-catalog.json | jq
