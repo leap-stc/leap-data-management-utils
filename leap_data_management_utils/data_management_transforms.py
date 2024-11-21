@@ -6,6 +6,7 @@ import os
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Optional
 
 import apache_beam as beam
 import zarr
@@ -179,6 +180,7 @@ class CopyRclone(beam.PTransform):
     """
 
     target: str
+    remove_endpoint_url: Optional[str] = None        
 
     def _copy(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
         import os
@@ -217,9 +219,13 @@ class CopyRclone(beam.PTransform):
             del secret_client
 
             logger.warning(f'Copying from {source} to {self.target}')
+            if self.remove_endpoint_url is not None:
+                target = self.target.replace(self.remove_endpoint_url, "")
+            else:
+                target = self.target
 
             copy_proc = subprocess.run(
-                f'rclone -vv copy --fast-list --max-backlog 500000 --s3-chunk-size 200M --s3-upload-concurrency 128 --transfers 128 --checkers 128  -vv -P source:"{source}/" target:"{self.target}/"',
+                f'rclone -vv copy --fast-list --max-backlog 500000 --s3-chunk-size 200M --s3-upload-concurrency 128 --transfers 128 --checkers 128  -vv -P source:"{source}/" target:"{target}/"',
                 shell=True,
                 capture_output=True,
                 text=True,
