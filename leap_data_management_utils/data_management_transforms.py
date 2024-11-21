@@ -180,7 +180,7 @@ class CopyRclone(beam.PTransform):
     """
 
     target: str
-    remove_endpoint_url: Optional[str] = None        
+    remove_endpoint_url: Optional[str] = None
 
     def _copy(self, store: zarr.storage.FSStore) -> zarr.storage.FSStore:
         import os
@@ -220,7 +220,7 @@ class CopyRclone(beam.PTransform):
 
             logger.warning(f'Copying from {source} to {self.target}')
             if self.remove_endpoint_url is not None:
-                target = self.target.replace(self.remove_endpoint_url, "")
+                target = self.target.replace(self.remove_endpoint_url, '')
             else:
                 target = self.target
 
