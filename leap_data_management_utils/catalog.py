@@ -196,7 +196,9 @@ def load_store(store: str, engine: str) -> xr.Dataset:
     return xr.open_dataset(url, engine=engine, chunks={}, decode_cf=False)
 
 
-def is_geospatial(ds: xr.Dataset) -> bool:
+def is_geospatial(ds: xr.Dataset, is_multiscale: bool) -> bool:
+    if is_multiscale:
+        return 'x' in ds.dims and 'y' in ds.dims
     cf_axes = ds.cf.axes
 
     # Regex patterns that match 'lat', 'latitude', 'lon', 'longitude' and also allow prefixes
@@ -230,13 +232,16 @@ def check_single_store(store: Store) -> None:
     if is_public:
         # check if the store is geospatial
         if multiscale_path:
-            ds = xr.open_datatree(multiscale_path, engine='zarr', chunks={}, decode_cf=False)
+            dt = xr.open_datatree(multiscale_path, engine='zarr', chunks={}, decode_cf=False)
+            ds = dt['0'].ds
+            is_geospatial_store = is_geospatial(ds, True)
+
         else:
             ds = load_store(
                 store.url,
                 store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
             )
-        is_geospatial_store = is_geospatial(ds)
+            is_geospatial_store = is_geospatial(ds, False)
         store.geospatial = is_geospatial_store
         # get last_updated_timestamp
         store.last_updated = ds.attrs.get('pangeo_forge_build_timestamp', None)
