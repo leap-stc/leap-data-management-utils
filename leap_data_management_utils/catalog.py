@@ -172,7 +172,7 @@ def get_http_url(store: str) -> str:
     return url
 
 
-def is_store_public(store) -> bool:
+def is_store_public(store: str) -> bool:
     try:
         url = get_http_url(store)
         path = f'{url}/.zmetadata'
@@ -220,12 +220,17 @@ def check_stores(feed: Feedstock) -> None:
 
 
 def check_single_store(store: Store) -> None:
-    is_public = is_store_public(store.rechunking or store.url)
+    multiscale_path = None
+    for entry in store.rechunking or []:
+        if entry.use_case == 'multiscale':
+            multiscale_path = entry.path
+            break
+    is_public = is_store_public(multiscale_path or store.url)
     store.public = is_public
     if is_public:
         # check if the store is geospatial
         ds = load_store(
-            store.rechunking or store.url,
+            multiscale_path or store.url,
             store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
         )
         is_geospatial_store = is_geospatial(ds)
