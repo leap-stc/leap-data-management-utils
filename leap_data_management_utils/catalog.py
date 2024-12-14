@@ -40,11 +40,16 @@ class XarrayOpenKwargs(pydantic.BaseModel):
 default_xarray_open_kwargs = XarrayOpenKwargs(engine='zarr')
 
 
+class RechunkingItem(pydantic.BaseModel):
+    path: str = pydantic.Field(..., description='Path to the rechunked store')
+    use_case: str = pydantic.Field(..., description='Use case of the rechunking')
+
+
 class Store(pydantic.BaseModel):
     id: str = pydantic.Field(..., description='ID of the store')
     name: str = pydantic.Field(None, description='Name of the store')
     url: str = pydantic.Field(..., description='URL of the store')
-    rechunking: list[dict[str, str]] | None = pydantic.Field(None, alias='ncviewjs:rechunking')
+    rechunking: list[RechunkingItem] | None = pydantic.Field(None)
     public: bool | None = pydantic.Field(None, description='Whether the store is public')
     geospatial: bool | None = pydantic.Field(None, description='Whether the store is geospatial')
     xarray_open_kwargs: XarrayOpenKwargs | None = pydantic.Field(
