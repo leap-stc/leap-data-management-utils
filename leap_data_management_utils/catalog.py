@@ -172,7 +172,7 @@ def get_http_url(store: str) -> str:
     return url
 
 
-def is_store_public(store) -> bool:
+def is_store_public(store: str) -> bool:
     try:
         url = get_http_url(store)
         path = f'{url}/.zmetadata'
@@ -214,20 +214,28 @@ def is_geospatial(ds: xr.Dataset) -> bool:
 
 
 def check_stores(feed: Feedstock) -> None:
-    for index, store in enumerate(feed.stores):
-        print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
-        check_single_store(store)
+    if feed.stores:
+        for index, store in enumerate(feed.stores):
+            print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
+            check_single_store(store)
 
 
 def check_single_store(store: Store) -> None:
-    is_public = is_store_public(store.rechunking or store.url)
+    multiscale_path = next(
+        (entry.path for entry in store.rechunking or [] if entry.use_case == 'multiscales'),
+        None,
+    )
+    is_public = is_store_public(multiscale_path or store.url)
     store.public = is_public
     if is_public:
         # check if the store is geospatial
-        ds = load_store(
-            store.rechunking or store.url,
-            store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
-        )
+        if multiscale_path:
+            ds = xr.open_datatree(multiscale_path, engine='zarr', chunks={}, decode_cf=False)
+        else:
+            ds = load_store(
+                store.url,
+                store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
+            )
         is_geospatial_store = is_geospatial(ds)
         store.geospatial = is_geospatial_store
         # get last_updated_timestamp
