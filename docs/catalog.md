@@ -176,13 +176,11 @@ jobs:
 ```
 
 > [!IMPORTANT]
-
 > Once you have the workflow file in place, you need to add the following secrets to your repository:
-
+>
 > - `APP_ID`: GitHub App ID
 > - `PRIVATE_KEY`: GitHub App private key
-
-> These secrets are required to authenticate the GitHub Action workflow with the GitHub API and can be obtained by contacting [anderson](https://github.com/andersy005)
+>   These secrets are required to authenticate the GitHub Action workflow with the GitHub API and can be obtained by contacting [anderson](https://github.com/andersy005)
 
 ### How to Add a New Dataset to the LEAP Web Catalog
 
