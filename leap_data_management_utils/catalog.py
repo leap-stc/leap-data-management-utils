@@ -153,9 +153,9 @@ def format_report(title: str, feedstocks: list[dict], include_traceback: bool = 
         report += '  🚀 None found\n'
     else:
         for entry in feedstocks:
-            report += f"  📂 {entry['feedstock']}\n"
+            report += f'  📂 {entry["feedstock"]}\n'
             if include_traceback:
-                report += f"    🔎 {entry['traceback']}\n"
+                report += f'    🔎 {entry["traceback"]}\n'
     return report
 
 
