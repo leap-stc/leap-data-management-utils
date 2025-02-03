@@ -1,138 +1,134 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm[toml]", "wheel"]
-build-backend = "setuptools.build_meta"
-
+    build-backend = "setuptools.build_meta"
+    requires      = ["setuptools", "setuptools-scm[toml]", "wheel"]
 
 [project]
-name = "leap-data-management-utils"
-dynamic = ["version"]
-requires-python = ">=3.9"
-description = "LEAP / pangeo-forge-recipes extension library for logging data in Google Big Query"
-readme = "README.md"
-authors = [{ name = "LEAP", email = "leap@columbia.edu" }]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Intended Audience :: Science/Research",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Topic :: Scientific/Engineering",
-]
-dependencies = ["dask", "cftime", "ruamel.yaml", "xarray", "zarr"]
+    authors = [{ name = "LEAP", email = "leap@columbia.edu" }]
+    classifiers = [
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python",
+        "Topic :: Scientific/Engineering",
+    ]
+    dependencies = ["cftime", "dask", "ruamel.yaml", "xarray", "zarr<3"]
+    description = "LEAP / pangeo-forge-recipes extension library for logging data in Google Big Query"
+    dynamic = ["version"]
+    name = "leap-data-management-utils"
+    readme = "README.md"
+    requires-python = ">=3.9"
 
 [project.optional-dependencies]
 
-bigquery = [
-    "tqdm",
-    "google-api-core",
-    "google-cloud-bigquery",
-    "db_dtypes",
-    "pangeo-forge-esgf>0.3.0",
-]
-pangeo-forge = [
-    "pangeo-forge-recipes",
-    "apache-beam==2.60.0",
-    "dynamic-chunks",
-    "leap-data-management-utils[bigquery]",
-]
-catalog = [
-    "aiohttp",
-    "cf_xarray",
-    "pydantic-core",
-    "pydantic>=2",
-    "requests",
-    "universal-pathlib",
-    "kerchunk >=0.2.6",
-]
-complete = ["leap-data-management-utils[pangeo-forge,catalog]"]
-test = ["pytest", "leap-data-management-utils[complete]"]
-dev = ["leap-data-management-utils[test]", "pre-commit"]
+    bigquery = [
+        "db_dtypes",
+        "google-api-core",
+        "google-cloud-bigquery",
+        "pangeo-forge-esgf>0.3.0",
+        "tqdm",
+    ]
+    catalog = [
+        "aiohttp",
+        "cf_xarray",
+        "kerchunk >=0.2.6",
+        "pydantic-core",
+        "pydantic>=2",
+        "requests",
+        "universal-pathlib",
+    ]
+    complete = ["leap-data-management-utils[pangeo-forge,catalog]"]
+    dev = ["leap-data-management-utils[test]", "pre-commit"]
+    pangeo-forge = [
+        "apache-beam==2.60.0",
+        "dynamic-chunks",
+        "leap-data-management-utils[bigquery]",
+        "pangeo-forge-recipes",
+    ]
+    test = ["leap-data-management-utils[complete]", "pytest"]
 
 [project.scripts]
-leap-catalog = "leap_data_management_utils.catalog:main"
-
+    leap-catalog = "leap_data_management_utils.catalog:main"
 
 [tool.setuptools.packages.find]
-include = ["leap_data_management_utils*"]
+    include = ["leap_data_management_utils*"]
 
 [tool.setuptools_scm]
-write_to = "leap_data_management_utils/_version.py"
-write_to_template = "__version__ = '{version}'"
+    write_to          = "leap_data_management_utils/_version.py"
+    write_to_template = "__version__ = '{version}'"
 
 [tool.ruff]
-line-length = 100
-target-version = "py39"
-extend-include = ["*.ipynb"]
+    extend-include = ["*.ipynb"]
+    line-length    = 100
+    target-version = "py39"
 
-
-builtins = ["ellipsis"]
-# Exclude a variety of commonly ignored directories.
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".git-rewrite",
-    ".hg",
-    ".ipynb_checkpoints",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pyenv",
-    ".pytest_cache",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    ".vscode",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "site-packages",
-    "venv",
-]
+    builtins = ["ellipsis"]
+    # Exclude a variety of commonly ignored directories.
+    exclude = [
+        ".bzr",
+        ".direnv",
+        ".eggs",
+        ".git",
+        ".git-rewrite",
+        ".hg",
+        ".ipynb_checkpoints",
+        ".mypy_cache",
+        ".nox",
+        ".pants.d",
+        ".pyenv",
+        ".pytest_cache",
+        ".pytype",
+        ".ruff_cache",
+        ".svn",
+        ".tox",
+        ".venv",
+        ".vscode",
+        "__pypackages__",
+        "_build",
+        "buck-out",
+        "build",
+        "dist",
+        "node_modules",
+        "site-packages",
+        "venv",
+    ]
 [tool.ruff.lint]
-per-file-ignores = {}
-ignore = [
-    "E721", # Comparing types instead of isinstance
-    "E741", # Ambiguous variable names
-    "E501", # Conflicts with ruff format
-]
-select = [
-    # Pyflakes
-    "F",
-    # Pycodestyle
-    "E",
-    "W",
-    # isort
-    "I",
-    # Pyupgrade
-    "UP",
-]
-
+    ignore = [
+        "E501", # Conflicts with ruff format
+        "E721", # Comparing types instead of isinstance
+        "E741", # Ambiguous variable names
+    ]
+    per-file-ignores = {}
+    select = [
+        # Pyflakes
+        "F",
+        # Pycodestyle
+        "E",
+        "W",
+        # isort
+        "I",
+        # Pyupgrade
+        "UP",
+    ]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 18
+    max-complexity = 18
 
 [tool.ruff.lint.isort]
-known-first-party = ["leap_data_management_utils"]
-combine-as-imports = true
+    combine-as-imports = true
+    known-first-party  = ["leap_data_management_utils"]
 
 [tool.ruff.format]
-quote-style = "single"
-docstring-code-format = true
+    docstring-code-format = true
+    quote-style           = "single"
 
 [tool.ruff.lint.pydocstyle]
-convention = "numpy"
+    convention = "numpy"
 
 [tool.ruff.lint.flake8-tidy-imports]
-# Disallow all relative imports.
-ban-relative-imports = "all"
+    # Disallow all relative imports.
+    ban-relative-imports = "all"
