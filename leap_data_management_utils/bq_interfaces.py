@@ -231,7 +231,7 @@ class CMIPBQInterface(BQInterface):
         query = f"""
         SELECT instance_id, store
         FROM {self.table_id}
-        WHERE instance_id IN ({",".join([f"'{iid}'" for iid in iids])})
+        WHERE instance_id IN ({','.join([f"'{iid}'" for iid in iids])})
         """
         results = self._get_query_job(query).result()
         # this is a full row iterator, for now just return the iids
