@@ -142,34 +142,45 @@ Validation of catalog files can also be performed via GitHub Actions using the f
 
 ```yaml
 # contents of .github/workflows/validate-catalog.yaml
-name: Catalog
+name: leap-catalog
 
 on:
   pull_request:
     branches:
+      - main
   push:
     branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # every day at midnight
+
+permissions:
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-      - name: validate feedstock entry
-        uses: leap-stc/data-catalog-actions/leap-catalog@main
-        with:
-          single-feedstock: "./feedstock/catalog.yaml" # path to the catalog.yaml file
+  single-feedstock:
+    uses: leap-stc/data-catalog-actions/.github/workflows/reusable-catalog-entry.yml@main
+    with:
+      python-version: "3.12"
+      feedstock-path: "./feedstock/catalog.yaml"
+      output-directory: "./"
+    secrets:
+      APP_ID: ${{ secrets.APP_ID }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
 ```
+
+> [!IMPORTANT]
+> Once you have the workflow file in place, you need to add the following secrets to your repository:
+>
+> - `APP_ID`: GitHub App ID
+> - `PRIVATE_KEY`: GitHub App private key
+>   These secrets are required to authenticate the GitHub Action workflow with the GitHub API and can be obtained by contacting [anderson](https://github.com/andersy005)
 
 ### How to Add a New Dataset to the LEAP Web Catalog
 

@@ -40,11 +40,16 @@ class XarrayOpenKwargs(pydantic.BaseModel):
 default_xarray_open_kwargs = XarrayOpenKwargs(engine='zarr')
 
 
+class RechunkingItem(pydantic.BaseModel):
+    path: str = pydantic.Field(..., description='Path to the rechunked store')
+    use_case: str = pydantic.Field(..., description='Use case of the rechunking')
+
+
 class Store(pydantic.BaseModel):
     id: str = pydantic.Field(..., description='ID of the store')
     name: str = pydantic.Field(None, description='Name of the store')
     url: str = pydantic.Field(..., description='URL of the store')
-    rechunking: list[dict[str, str]] | None = pydantic.Field(None, alias='ncviewjs:rechunking')
+    rechunking: list[RechunkingItem] | None = pydantic.Field(None)
     public: bool | None = pydantic.Field(None, description='Whether the store is public')
     geospatial: bool | None = pydantic.Field(None, description='Whether the store is geospatial')
     xarray_open_kwargs: XarrayOpenKwargs | None = pydantic.Field(
@@ -148,9 +153,9 @@ def format_report(title: str, feedstocks: list[dict], include_traceback: bool = 
         report += '  🚀 None found\n'
     else:
         for entry in feedstocks:
-            report += f"  📂 {entry['feedstock']}\n"
+            report += f'  📂 {entry["feedstock"]}\n'
             if include_traceback:
-                report += f"    🔎 {entry['traceback']}\n"
+                report += f'    🔎 {entry["traceback"]}\n'
     return report
 
 
@@ -167,7 +172,7 @@ def get_http_url(store: str) -> str:
     return url
 
 
-def is_store_public(store) -> bool:
+def is_store_public(store: str) -> bool:
     try:
         url = get_http_url(store)
         path = f'{url}/.zmetadata'
@@ -191,7 +196,9 @@ def load_store(store: str, engine: str) -> xr.Dataset:
     return xr.open_dataset(url, engine=engine, chunks={}, decode_cf=False)
 
 
-def is_geospatial(ds: xr.Dataset) -> bool:
+def is_geospatial(ds: xr.Dataset, is_multiscale: bool) -> bool:
+    if is_multiscale:
+        return 'x' in ds.dims and 'y' in ds.dims
     cf_axes = ds.cf.axes
 
     # Regex patterns that match 'lat', 'latitude', 'lon', 'longitude' and also allow prefixes
@@ -209,21 +216,32 @@ def is_geospatial(ds: xr.Dataset) -> bool:
 
 
 def check_stores(feed: Feedstock) -> None:
-    for index, store in enumerate(feed.stores):
-        print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
-        check_single_store(store)
+    if feed.stores:
+        for index, store in enumerate(feed.stores):
+            print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
+            check_single_store(store)
 
 
 def check_single_store(store: Store) -> None:
-    is_public = is_store_public(store.rechunking or store.url)
+    multiscale_path = next(
+        (entry.path for entry in store.rechunking or [] if entry.use_case == 'multiscales'),
+        None,
+    )
+    is_public = is_store_public(multiscale_path or store.url)
     store.public = is_public
     if is_public:
         # check if the store is geospatial
-        ds = load_store(
-            store.rechunking or store.url,
-            store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
-        )
-        is_geospatial_store = is_geospatial(ds)
+        if multiscale_path:
+            dt = xr.open_datatree(multiscale_path, engine='zarr', chunks={}, decode_cf=False)
+            ds = dt['0'].ds
+            is_geospatial_store = is_geospatial(ds, True)
+
+        else:
+            ds = load_store(
+                store.url,
+                store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
+            )
+            is_geospatial_store = is_geospatial(ds, False)
         store.geospatial = is_geospatial_store
         # get last_updated_timestamp
         store.last_updated = ds.attrs.get('pangeo_forge_build_timestamp', None)
@@ -290,9 +308,14 @@ def generate(args):
     catalog = validate_feedstocks(feedstocks=feedstocks)
     output = upath.UPath(args.output).resolve() / 'output'
     output.mkdir(parents=True, exist_ok=True)
-    with open(f'{output}/consolidated-web-catalog.json', 'w') as f:
+    path = (
+        output / 'single-feedstock-web-catalog.json'
+        if args.single
+        else output / 'consolidated-web-catalog.json'
+    )
+    with open(path, 'w') as f:
         json.dump(catalog, f, indent=2, default=pydantic_core.to_jsonable_python)
-        print(f'Catalog written to {output}/consolidated-web-catalog.json')
+        print(f'Catalog written to {path}')
 
 
 def main():
