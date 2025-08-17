@@ -78,7 +78,11 @@ def test_attributes(ds: xr.Dataset, iid: str, verbose):
         if 'version' not in facet:  # (TODO: Why is the version not in all datasets?)
             if verbose:
                 print(f'Checking {facet = } in dataset attributes')
-            assert ds.attrs[facet] == facet_value
+            actual_value = ds.attrs.get(facet)
+            if actual_value != facet_value:
+                raise AssertionError(
+                    f"Attribute mismatch for facet '{facet}': expected '{facet_value}', got '{actual_value}'"
+                )
 
     # check that the esgf api response is stored in the dataset attributes
     assert 'pangeo_forge_api_responses' in ds.attrs
