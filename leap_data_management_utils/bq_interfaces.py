@@ -162,7 +162,7 @@ class CMIPBQInterface(BQInterface):
 
     def _get_timestamp(self) -> str:
         """Get the current timestamp"""
-        return datetime.datetime.utcnow().isoformat()
+        return datetime.utcnow().isoformat()
 
     def insert_iid(self, IID_entry):
         """Insert a row into the table for a given IID_entry object"""

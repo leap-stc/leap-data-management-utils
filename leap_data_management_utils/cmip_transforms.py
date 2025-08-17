@@ -151,17 +151,32 @@ class Preprocessor(beam.PTransform):
             if isinstance(att_value, str):
                 new_value = att_value.encode('utf-8', 'ignore').decode()
                 if new_value != att_value:
-                    print(
-                        f'Sanitized datasets attributes field {att}: \n {att_value} \n ----> \n {new_value}'
-                    )
-                    ds.attrs[att] = new_value
+                    # Option 1: Use repr() to safely show all characters including non-printable ones
+                    print(f'Sanitized dataset attribute "{att}":')
+                    print(f'  Before: {repr(att_value)}')
+                    print(f'  After:  {repr(new_value)}')
+
+                    # Option 2: Show character-by-character comparison
+                    print('  Character comparison:')
+                    for i, (old_char, new_char) in enumerate(zip(att_value, new_value)):
+                        if old_char != new_char:
+                            print(f'    Position {i}: {repr(old_char)} -> {repr(new_char)}')
+
+                    # Option 3: Show which characters were removed
+                    removed_chars = set(att_value) - set(new_value)
+                    if removed_chars:
+                        print(f'  Removed characters: {[repr(c) for c in removed_chars]}')
+
+                    print()  # Empty line for readability
+
+                ds.attrs[att] = new_value
         return index, ds
 
     def expand(self, pcoll: beam.PCollection) -> beam.PCollection:
         return (
             pcoll
-            | 'Fix coordinates' >> beam.Map(self._keep_only_variable_id)
             | 'Sanitize Attrs' >> beam.Map(self._sanitize_attrs)
+            | 'Fix coordinates' >> beam.Map(self._keep_only_variable_id)
         )
 
 
