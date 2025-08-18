@@ -16,7 +16,7 @@
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering",
     ]
-    dependencies = ["cftime", "dask", "ruamel.yaml", "xarray", "zarr<3"]
+    dependencies = ["cftime", "dask", "ruamel.yaml", "xarray", "zarr<4"]
     description = "LEAP / pangeo-forge-recipes extension library for logging data in Google Big Query"
     dynamic = ["version"]
     name = "leap-data-management-utils"
@@ -44,7 +44,7 @@
     complete = ["leap-data-management-utils[pangeo-forge,catalog]"]
     dev = ["leap-data-management-utils[test]", "pre-commit"]
     pangeo-forge = [
-        "apache-beam==2.60.0",
+        "apache-beam==2.62.0",
         "dynamic-chunks",
         "leap-data-management-utils[bigquery]",
         "pangeo-forge-recipes",
