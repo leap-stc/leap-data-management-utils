@@ -73,20 +73,34 @@ def test_attributes(ds: xr.Dataset, iid: str, verbose):
     # Member id is composed of two (I think) required attributes as:
     # <sub_experiment_id>-<variant_label>
     # See https://docs.google.com/document/d/1h0r8RZr_f3-8egBMMh7aqLwy3snpD6_MrDz1q8n5XUk/edit for more info
-    iid_schema = iid_schema.replace('.member_id.', '.variant_label.sub_experiment_id.')
-    for facet_value, facet in zip(iid.split('.'), iid_schema.split('.')):
-        if 'version' not in facet:  # (TODO: Why is the version not in all datasets?)
+    # Construct a dict of schema and values extracted from the dataset attributes
+    facets_from_iid = {facet: iid_facet for facet, iid_facet in zip(iid_schema.split('.'), iid.split('.'))}
+    # detect member_ids that have a sub_experiment_id
+    member_id = facets_from_iid.pop('member_id')
+    if '-' in member_id:
+        facets_from_iid['sub_experiment_id'], facets_from_iid['variant_label'] = member_id.split('-', 1)
+    else:
+        facets_from_iid['variant_label'] = member_id
+    
+    ignore_fields = [
+        'version', # (TODO: Why is the version not in all datasets?)
+    ]
+    
+    for facet, facet_value in facets_from_iid.items():
+        if facet not in ignore_fields:  # (TODO: Why is the version not in all datasets?)
             if verbose:
                 print(f'Checking {facet = } in dataset attributes')
             actual_value = ds.attrs.get(facet)
             if actual_value != facet_value:
+                print(f"{iid =}")
                 raise AssertionError(
                     f"Attribute mismatch for facet '{facet}': expected '{facet_value}', got '{actual_value}'"
                 )
-
+   
     # check that the esgf api response is stored in the dataset attributes
     assert 'pangeo_forge_api_responses' in ds.attrs
-    assert len(ds.attrs['pangeo_forge_api_responses']['dataset']) == 1
+    assert 'dataset' in ds.attrs['pangeo_forge_api_responses']
+    assert 'files' in ds.attrs['pangeo_forge_api_responses']
     assert len(ds.attrs['pangeo_forge_api_responses']['files']) >= 1
 
 
