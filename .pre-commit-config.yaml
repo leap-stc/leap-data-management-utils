@@ -23,3 +23,9 @@ repos:
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.39.1
+    hooks:
+      - id: typos
+        args: ["--force-exclude"]
