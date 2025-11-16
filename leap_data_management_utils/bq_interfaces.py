@@ -239,7 +239,7 @@ class CMIPBQInterface(BQInterface):
 
     def iid_list_exists(self, iids: list[str]) -> list[str]:
         """More efficient way to check if a list of iids exists in the table
-        Passes the entire list in batches into SQL querys for maximum efficiency.
+        Passes the entire list in batches into SQL queries for maximum efficiency.
         Returns a list of iids that exist in the table
         """
 
