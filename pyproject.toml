@@ -48,6 +48,8 @@
         "dynamic-chunks",
         "leap-data-management-utils[bigquery]",
         "pangeo-forge-recipes",
+        "pangeo-forge-esgf",
+        "zarr<3",
     ]
     test = ["leap-data-management-utils[complete]", "pytest"]
 
