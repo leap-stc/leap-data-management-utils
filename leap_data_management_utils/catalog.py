@@ -1,6 +1,7 @@
 import argparse
 import json
 import re
+import time
 import traceback
 import typing
 
@@ -13,6 +14,8 @@ import xarray as xr
 from ruamel.yaml import YAML
 
 yaml = YAML(typ='safe')
+
+_REQUEST_TIMEOUT = 10  # seconds
 
 
 def s3_to_https(s3_url: str) -> str:
@@ -118,7 +121,8 @@ class Feedstock(pydantic.BaseModel):
         return cls.model_validate(content)
 
 
-def convert_to_raw_github_url(github_url):
+def convert_to_raw_github_url(github_url: str | upath.UPath) -> str:
+    github_url = str(github_url)
     # Check if the URL is already a raw URL
     if 'raw.githubusercontent.com' in github_url:
         return github_url
@@ -140,10 +144,14 @@ class ValidationError(Exception):
 
 def collect_feedstocks(path: upath.UPath) -> list[str]:
     """Collects all the datasets in the given directory."""
-
     url = convert_to_raw_github_url(path)
-    if not (feedstocks := yaml.load(upath.UPath(url).read_text())['feedstocks']):
-        raise FileNotFoundError(f'No YAML files (.yaml or .yml) found in {path}')
+    try:
+        content = yaml.load(upath.UPath(url).read_text())
+    except Exception as e:
+        raise RuntimeError(f'Failed to load feedstocks list from {path}: {e}') from e
+    feedstocks = content.get('feedstocks', [])
+    if not feedstocks:
+        raise ValueError(f'No feedstocks found in {path}')
     return feedstocks
 
 
@@ -173,27 +181,48 @@ def get_http_url(store: str) -> str:
 
 
 def is_store_public(store: str) -> bool:
-    try:
-        url = get_http_url(store)
-        path = f'{url}/.zmetadata'
-
-        response = requests.get(path)
-        response.raise_for_status()
-        return True
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            print(f'Resource not found at {path}.')
-        else:
-            print(f'HTTP error {e.response.status_code} for {path}.')
-        return False
-    except Exception as e:
-        print(f'An error occurred while checking if store {store} is public: {str(e)}')
-        return False
+    url = get_http_url(store)
+    # Check zarr v2 consolidated metadata first, then zarr v3 metadata
+    for candidate in ['.zmetadata', 'zarr.json']:
+        path = f'{url}/{candidate}'
+        try:
+            response = requests.get(path, timeout=_REQUEST_TIMEOUT)
+            response.raise_for_status()
+            return True
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            if status not in (403, 404):
+                print(f'HTTP error {status} for {url}/{candidate}.')
+        except Exception as e:
+            print(f'An error occurred while checking {url}/{candidate}: {e}')
+    return False
 
 
 def load_store(store: str, engine: str) -> xr.Dataset:
     url = get_http_url(store)
     return xr.open_dataset(url, engine=engine, chunks={}, decode_cf=False)
+
+
+_TRANSIENT_ERRORS = (OSError, IOError)
+_MAX_RETRIES = 3
+_RETRY_BASE_DELAY = 2.0  # seconds; doubled on each attempt
+
+
+def _open_with_retry(open_fn, *args, **kwargs):
+    """Call open_fn with exponential backoff on transient I/O errors."""
+    delay = _RETRY_BASE_DELAY
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            return open_fn(*args, **kwargs)
+        except _TRANSIENT_ERRORS as exc:
+            if attempt == _MAX_RETRIES:
+                raise
+            print(
+                f'  ↩️  Transient error on attempt {attempt}/{_MAX_RETRIES}: {exc}. '
+                f'Retrying in {delay:.0f}s…'
+            )
+            time.sleep(delay)
+            delay *= 2
 
 
 def is_geospatial(ds: xr.Dataset, is_multiscale: bool) -> bool:
@@ -205,8 +234,8 @@ def is_geospatial(ds: xr.Dataset, is_multiscale: bool) -> bool:
     lat_pattern = re.compile(r'.*(lat|latitude)$', re.IGNORECASE)
     lon_pattern = re.compile(r'.*(lon|longitude)$', re.IGNORECASE)
 
-    # Gather all coordinate and dimension names
-    all_names = set(ds.coords.keys()).union(set(ds.dims))
+    # Gather all coordinate and dimension names (cast to str to satisfy regex)
+    all_names = {str(k) for k in set(ds.coords.keys()).union(set(ds.dims))}
 
     # Identify if both latitude and longitude coordinates/dimensions are present
     has_latitude = any(lat_pattern.match(name) for name in all_names)
@@ -219,7 +248,10 @@ def check_stores(feed: Feedstock) -> None:
     if feed.stores:
         for index, store in enumerate(feed.stores):
             print(f'  🚦 {store.id} ({index + 1}/{len(feed.stores)})')
-            check_single_store(store)
+            try:
+                check_single_store(store)
+            except Exception as e:
+                print(f'  ⚠️  Failed to fully inspect store {store.id!r}: {e}')
 
 
 def check_single_store(store: Store) -> None:
@@ -230,21 +262,26 @@ def check_single_store(store: Store) -> None:
     is_public = is_store_public(multiscale_path or store.url)
     store.public = is_public
     if is_public:
-        # check if the store is geospatial
-        if multiscale_path:
-            dt = xr.open_datatree(multiscale_path, engine='zarr', chunks={}, decode_cf=False)
-            ds = dt['0'].ds
-            is_geospatial_store = is_geospatial(ds, True)
-
-        else:
-            ds = load_store(
-                store.url,
-                store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
-            )
-            is_geospatial_store = is_geospatial(ds, False)
-        store.geospatial = is_geospatial_store
-        # get last_updated_timestamp
-        store.last_updated = ds.attrs.get('pangeo_forge_build_timestamp', None)
+        try:
+            # check if the store is geospatial
+            if multiscale_path:
+                dt = _open_with_retry(
+                    xr.open_datatree, multiscale_path, engine='zarr', chunks={}, decode_cf=False
+                )
+                ds: xr.Dataset = dt['0'].ds  # type: ignore[assignment]
+                is_geospatial_store = is_geospatial(ds, True)
+            else:
+                ds = _open_with_retry(
+                    load_store,
+                    store.url,
+                    store.xarray_open_kwargs.engine if store.xarray_open_kwargs else 'zarr',
+                )
+                is_geospatial_store = is_geospatial(ds, False)
+            store.geospatial = is_geospatial_store
+            # get last_updated_timestamp
+            store.last_updated = ds.attrs.get('pangeo_forge_build_timestamp', None)
+        except Exception as e:
+            print(f'  ⚠️  Could not inspect dataset for store {store.id!r}: {e}')
 
 
 def validate_feedstocks(*, feedstocks: list[str]) -> list[Feedstock]:
@@ -279,7 +316,7 @@ def validate_feedstocks(*, feedstocks: list[str]) -> list[Feedstock]:
     return catalog
 
 
-def validate(args):
+def validate(args) -> None:
     if args.single:
         # If single file path is provided, validate just this one feedstock
         try:
@@ -303,7 +340,7 @@ def validate(args):
         validate_feedstocks(feedstocks=feedstocks)
 
 
-def generate(args):
+def generate(args) -> None:
     feedstocks = [args.single] if args.single else collect_feedstocks(args.path)
     catalog = validate_feedstocks(feedstocks=feedstocks)
     output = upath.UPath(args.output).resolve() / 'output'
@@ -318,7 +355,7 @@ def generate(args):
         print(f'Catalog written to {path}')
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Utilities for cataloging feedstocks for LEAP')
     subparsers = parser.add_subparsers(help='sub-command help')
 
